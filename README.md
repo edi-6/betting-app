@@ -80,7 +80,6 @@ Xcode, no Android Studio.
 ```bash
 git clone https://github.com/edi-6/betting-app.git
 cd betting-app
-git checkout claude/sports-betting-tracker-app-f5zk3f
 npm install        # a minute or two, only needed once
 npx expo start     # prints a QR code
 ```
