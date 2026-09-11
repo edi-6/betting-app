@@ -438,15 +438,7 @@ export function BetFormScreen({ navigation, route }: RootStackScreenProps<'BetFo
         </Card>
       ))}
 
-      {legs.length > 1 || legs.length === 1 ? (
-        <Button
-          label="Add another leg"
-          variant="secondary"
-          icon="add"
-          fullWidth
-          onPress={addLeg}
-        />
-      ) : null}
+      <Button label="Add another leg" variant="secondary" icon="add" fullWidth onPress={addLeg} />
 
       <Card title="Stake & book">
         <View style={styles.fieldGroup}>
