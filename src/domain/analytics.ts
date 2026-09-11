@@ -479,8 +479,12 @@ export function clvStats(bets: Bet[]): ClvStats {
 export interface RiskStats {
   /** Largest peak-to-trough fall of the cumulative profit curve, as a positive number. */
   maxDrawdown: number;
-  /** Same figure relative to the peak, 0–1. 0 when the peak was never positive. */
-  maxDrawdownPercent: number;
+  /**
+   * The same fall as a share of the bankroll at its high-water mark, 0–1.
+   * `undefined` when no capital base was supplied — a drawdown measured against
+   * peak *profit* alone is meaningless once profit passes back through zero.
+   */
+  maxDrawdownPercent?: number;
   /** Days spent below the previous peak during the worst drawdown. */
   longestDrawdownDays: number;
   /** Standard deviation of per-bet returns measured in units of stake. */
@@ -495,14 +499,19 @@ export interface RiskStats {
   averageDailySwing: number;
 }
 
-export function riskStats(bets: Bet[]): RiskStats {
+/**
+ * @param capitalBase Money put in (starting bankroll plus deposits). Supplying it
+ *   turns the drawdown into a percentage of the bankroll at its high-water mark,
+ *   which is the figure bettors actually care about.
+ */
+export function riskStats(bets: Bet[], capitalBase = 0): RiskStats {
   const settled = settledChronologically(gradeBets(bets));
   const series = profitSeries(bets);
 
   let peak = 0;
   let peakTimestamp = series[0]?.timestamp ?? 0;
   let maxDrawdown = 0;
-  let maxDrawdownPercent = 0;
+  let peakAtMaxDrawdown = 0;
   let longestDrawdownDays = 0;
 
   for (const point of series) {
@@ -513,13 +522,17 @@ export function riskStats(bets: Bet[]): RiskStats {
     const drawdown = peak - point.cumulative;
     if (drawdown > maxDrawdown) {
       maxDrawdown = drawdown;
-      maxDrawdownPercent = peak > 0 ? drawdown / peak : 0;
+      peakAtMaxDrawdown = peak;
     }
     if (drawdown > 0) {
       const days = Math.round((point.timestamp - peakTimestamp) / 86400000);
       longestDrawdownDays = Math.max(longestDrawdownDays, days);
     }
   }
+
+  const peakEquity = capitalBase + peakAtMaxDrawdown;
+  const maxDrawdownPercent =
+    capitalBase > 0 && peakEquity > 0 ? maxDrawdown / peakEquity : undefined;
 
   const returns = settled
     .filter((g) => g.bet.stake > 0)

@@ -73,11 +73,18 @@ function roundOdds(value: number): number {
 }
 
 /**
- * A realistic six-month history: ~180 bets across several sports and books, with a
- * small positive edge on modelled picks and a negative one on hunches — enough to
- * make every analytics screen meaningful on first launch.
+ * Seed chosen so the sample history is representative rather than a jackpot:
+ * roughly +8% ROI over 180 bets, a 21% drawdown along the way, a sub-50% win rate
+ * and positive closing line value. Changing it will change every demo screenshot.
  */
-export function createDemoData(now: Date = new Date(), seed = 20260911): AppData {
+export const DEMO_SEED = 5;
+
+/**
+ * A realistic six-month history: ~180 bets across several sports and books, with a
+ * positive edge on modelled picks and a negative one on hunches — enough to make
+ * every analytics screen meaningful on first launch.
+ */
+export function createDemoData(now: Date = new Date(), seed = DEMO_SEED): AppData {
   const random = createRandom(seed);
   const data = createEmptyData();
   const bets: Bet[] = [];
@@ -132,7 +139,9 @@ export function createDemoData(now: Date = new Date(), seed = 20260911): AppData
     placedAt.setHours(10 + Math.floor(random() * 11), Math.floor(random() * 60), 0, 0);
 
     const isParlay = random() < 0.18;
-    const legCount = isParlay ? 2 + Math.floor(random() * 3) : 1;
+    // Two or three legs. Four-leg longshots make the whole dataset swing on a
+    // single result, which is not what a real ledger looks like.
+    const legCount = isParlay ? 2 + Math.floor(random() * 2) : 1;
     const legs: Leg[] = [];
     const tags: string[] = [];
 
@@ -152,9 +161,9 @@ export function createDemoData(now: Date = new Date(), seed = 20260911): AppData
       }
 
       // Odds concentrated around the 1.6–3.0 band most bettors live in.
-      const odds = roundOdds(1.4 + Math.pow(random(), 2) * 6);
+      const odds = roundOdds(1.4 + Math.pow(random(), 2) * 4.5);
       // Closing line: modelled picks tend to shorten (positive CLV), hunches drift out.
-      const clvDrift = isModelled ? -0.025 : isHunch ? 0.035 : 0;
+      const clvDrift = isModelled ? -0.03 : isHunch ? 0.03 : -0.004;
       const closingOdds = roundOdds(
         Math.max(1.05, odds * (1 + clvDrift + (random() - 0.5) * 0.06)),
       );
@@ -186,8 +195,9 @@ export function createDemoData(now: Date = new Date(), seed = 20260911): AppData
       settledAt = settleDate.toISOString();
 
       for (const leg of legs) {
-        // Modelled picks beat the implied price slightly; hunches underperform it.
-        const edge = isModelled ? 0.035 : isHunch ? -0.05 : -0.005;
+        // Modelled picks beat the implied price; hunches underperform it. The blend
+        // leaves the demo bettor modestly ahead, which is what a tracker is for.
+        const edge = isModelled ? 0.05 : isHunch ? -0.035 : 0.006;
         const winProbability = Math.min(0.95, Math.max(0.02, impliedProbability(leg.odds) + edge));
         const roll = random();
         let status: LegStatus = roll < winProbability ? 'won' : 'lost';

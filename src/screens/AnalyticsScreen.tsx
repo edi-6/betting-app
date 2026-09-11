@@ -47,6 +47,7 @@ import {
 } from '../domain/filters';
 import { combinedClosingOdds, combinedOdds } from '../domain/settlement';
 import { useFormatters } from '../hooks/useFormatters';
+import { computeBankroll } from '../domain/bankroll';
 import { useApp } from '../store/AppStore';
 import { useTheme } from '../theme';
 import { profitColor } from '../theme/tokens';
@@ -69,7 +70,7 @@ const DIMENSIONS: { value: string; label: string; selector: BucketSelector }[] =
 
 export function AnalyticsScreen({ navigation }: TabScreenProps<'Analytics'>) {
   const theme = useTheme();
-  const { bets } = useApp();
+  const { bets, transactions, settings } = useApp();
   const { money, signedMoney } = useFormatters();
 
   const [tab, setTab] = useState<AnalyticsTab>('overview');
@@ -80,7 +81,14 @@ export function AnalyticsScreen({ navigation }: TabScreenProps<'Analytics'>) {
   const scoped = useMemo(() => applyFilter(bets, { ...EMPTY_FILTER, range }), [bets, range]);
   const summary = useMemo(() => summarize(scoped), [scoped]);
   const series = useMemo(() => profitSeries(scoped), [scoped]);
-  const risk = useMemo(() => riskStats(scoped), [scoped]);
+  const bankroll = useMemo(
+    () => computeBankroll(bets, transactions, settings.startingBankroll),
+    [bets, transactions, settings.startingBankroll],
+  );
+  const risk = useMemo(
+    () => riskStats(scoped, bankroll.startingBankroll + bankroll.deposits),
+    [scoped, bankroll.startingBankroll, bankroll.deposits],
+  );
   const clv = useMemo(() => clvStats(scoped), [scoped]);
 
   const chartData = useMemo<LinePoint[]>(
@@ -471,9 +479,11 @@ export function AnalyticsScreen({ navigation }: TabScreenProps<'Analytics'>) {
               label="Max drawdown"
               value={money(risk.maxDrawdown, 0)}
               caption={
-                risk.maxDrawdownPercent > 0
-                  ? `${formatPercent(risk.maxDrawdownPercent, 0)} off peak`
-                  : 'never below the start'
+                risk.maxDrawdown === 0
+                  ? 'never below the start'
+                  : risk.maxDrawdownPercent !== undefined
+                    ? `${formatPercent(risk.maxDrawdownPercent, 1)} of peak bankroll`
+                    : 'peak to trough'
               }
               tone={risk.maxDrawdown > 0 ? 'negative' : 'default'}
               icon="trending-down-outline"

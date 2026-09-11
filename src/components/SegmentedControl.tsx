@@ -40,11 +40,17 @@ export function SegmentedControl<T extends string>({
           gap: 2,
         },
         segment: {
-          flex: scrollable ? 0 : 1,
+          // `flex: 0` resolves to a zero flex-basis on web, which collapses the
+          // segment; spell the three properties out so content sizing is identical
+          // on iOS, Android and web.
+          flexGrow: scrollable ? 0 : 1,
+          flexShrink: scrollable ? 0 : 1,
+          flexBasis: 'auto',
           alignItems: 'center',
           justifyContent: 'center',
           paddingVertical: theme.spacing(2),
-          paddingHorizontal: theme.spacing(3),
+          // Four labels have to share a phone's width, so keep the gutters tight.
+          paddingHorizontal: scrollable ? theme.spacing(3.5) : theme.spacing(2),
           borderRadius: theme.radius.sm,
           minHeight: 36,
         },

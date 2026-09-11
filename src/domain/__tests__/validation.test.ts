@@ -1,6 +1,6 @@
 import { createDemoData } from '../demo';
 import { settleBet } from '../settlement';
-import { summarize } from '../analytics';
+import { clvStats, riskStats, summarize } from '../analytics';
 import {
   hasErrors,
   sanitizeAppData,
@@ -180,5 +180,26 @@ describe('demo data', () => {
     const summary = summarize(data.bets);
     expect(summary.settledBets).toBeGreaterThan(0);
     expect(summary.settledBets).toBeLessThanOrEqual(data.bets.length);
+  });
+
+  it('is representative rather than a jackpot', () => {
+    // The demo drives first-launch impressions and every store screenshot, so it
+    // should look like a competent bettor's ledger: modestly ahead, under 50% of
+    // bets landing, and with a real drawdown on the way.
+    const summary = summarize(data.bets);
+    const risk = riskStats(data.bets, data.settings.startingBankroll + 750);
+
+    expect(summary.roi).toBeGreaterThan(0.02);
+    expect(summary.roi).toBeLessThan(0.2);
+    expect(summary.winRate).toBeLessThan(0.5);
+    expect(risk.maxDrawdown).toBeGreaterThan(0);
+    expect(risk.maxDrawdownPercent ?? 0).toBeLessThan(0.45);
+    // Beating the close is the story the CLV screen tells; the demo should show it.
+    expect(clvStats(data.bets).averageClv).toBeGreaterThan(0);
+  });
+
+  it('keeps parlays to a believable number of legs', () => {
+    const maxLegs = Math.max(...data.bets.map((bet) => bet.legs.length));
+    expect(maxLegs).toBeLessThanOrEqual(3);
   });
 });

@@ -76,7 +76,12 @@ npm install
 npm start          # Expo dev server; press i / a, or scan the QR code with Expo Go
 npm run ios        # iOS simulator (macOS only)
 npm run android    # Android emulator or device
+npm run web        # runs in a browser — handy for a quick look without a device
 ```
+
+The web target is a preview convenience, not a shipping platform: it is useful for
+screenshots and for checking layout without a simulator, but iOS and Android are what
+the app is built and tested for.
 
 ### Quality gates
 

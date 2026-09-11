@@ -228,20 +228,20 @@ export function DashboardScreen({ navigation }: TabScreenProps<'Dashboard'>) {
           <View style={styles.heroStats}>
             <StatTile
               label="Available"
-              value={money(bankroll.available)}
+              value={compactMoney(bankroll.available)}
               icon="wallet-outline"
               compact
             />
             <StatTile
               label="At risk"
-              value={money(bankroll.atRisk)}
+              value={compactMoney(bankroll.atRisk)}
               caption={`${allTime.pendingBets} open`}
               icon="hourglass-outline"
               compact
               tone={bankroll.atRisk > 0 ? 'warning' : 'default'}
             />
             <StatTile
-              label="All-time P/L"
+              label="All-time"
               value={compactMoney(allTime.profit)}
               icon="stats-chart-outline"
               compact
@@ -317,21 +317,21 @@ export function DashboardScreen({ navigation }: TabScreenProps<'Dashboard'>) {
         >
           <View style={styles.grid}>
             <StatTile
-              label="Current streak"
+              label="Streak"
               value={
                 summary.currentStreak.count === 0
                   ? '—'
                   : `${summary.currentStreak.count} ${summary.currentStreak.type === 'win' ? 'W' : 'L'}`
               }
-              caption={`best ${summary.longestWinStreak}W · worst ${summary.longestLossStreak}L`}
+              caption={`best ${summary.longestWinStreak}W / ${summary.longestLossStreak}L`}
               tone={summary.currentStreak.type === 'win' ? 'positive' : summary.currentStreak.type === 'loss' ? 'negative' : 'default'}
               icon="flame-outline"
               compact
             />
             <StatTile
-              label="Beat the close"
+              label="Beat close"
               value={clv.tracked > 0 ? formatPercent(clv.beatRate, 0) : '—'}
-              caption={clv.tracked > 0 ? `${clv.tracked} bets priced` : 'add closing odds'}
+              caption={clv.tracked > 0 ? `${clv.tracked} priced` : 'add closing'}
               tone={clv.beatRate > 0.5 ? 'positive' : 'default'}
               icon="speedometer-outline"
               compact
@@ -339,7 +339,7 @@ export function DashboardScreen({ navigation }: TabScreenProps<'Dashboard'>) {
             <StatTile
               label="Avg CLV"
               value={clv.tracked > 0 ? formatSignedPercent(clv.averageClv, 2) : '—'}
-              caption="price vs closing"
+              caption="vs closing"
               tone={clv.averageClv > 0 ? 'positive' : clv.averageClv < 0 ? 'negative' : 'default'}
               icon="pulse-outline"
               compact

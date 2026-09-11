@@ -278,13 +278,51 @@ describe('riskStats', () => {
     ];
     const stats = riskStats(bets);
     expect(stats.maxDrawdown).toBeCloseTo(200, 10);
-    expect(stats.maxDrawdownPercent).toBeCloseTo(1, 10);
     expect(stats.longestDrawdownDays).toBe(2);
     expect(stats.volatility).toBeGreaterThan(0);
   });
 
+  it('reports the drawdown as a share of peak bankroll when capital is known', () => {
+    const bets = [
+      settledSingle(3, 'won', {
+        placedAt: '2026-03-01T12:00:00.000Z',
+        settledAt: '2026-03-01T20:00:00.000Z',
+      }),
+      settledSingle(2, 'lost', {
+        placedAt: '2026-03-02T12:00:00.000Z',
+        settledAt: '2026-03-02T20:00:00.000Z',
+      }),
+    ];
+    // Peak profit is +200 on a 1,000 base, so the high-water mark is 1,200.
+    const stats = riskStats(bets, 1000);
+    expect(stats.maxDrawdown).toBeCloseTo(100, 10);
+    expect(stats.maxDrawdownPercent).toBeCloseTo(100 / 1200, 10);
+  });
+
+  it('withholds the percentage when no capital base is known', () => {
+    // Measured against peak profit alone a drawdown can exceed 100%, which is
+    // meaningless — so the figure is omitted rather than shown as nonsense.
+    const bets = [
+      settledSingle(3, 'won', {
+        placedAt: '2026-03-01T12:00:00.000Z',
+        settledAt: '2026-03-01T20:00:00.000Z',
+      }),
+      settledSingle(2, 'lost', {
+        placedAt: '2026-03-02T12:00:00.000Z',
+        settledAt: '2026-03-02T20:00:00.000Z',
+      }),
+      settledSingle(2, 'lost', {
+        placedAt: '2026-03-03T12:00:00.000Z',
+        settledAt: '2026-03-03T20:00:00.000Z',
+      }),
+    ];
+    const stats = riskStats(bets);
+    expect(stats.maxDrawdown).toBeCloseTo(200, 10);
+    expect(stats.maxDrawdownPercent).toBeUndefined();
+  });
+
   it('handles a single bet without dividing by zero', () => {
-    const stats = riskStats([settledSingle(2, 'won')]);
+    const stats = riskStats([settledSingle(2, 'won')], 1000);
     expect(Number.isFinite(stats.volatility)).toBe(true);
     expect(stats.volatility).toBe(0);
     expect(stats.tStatistic).toBe(0);

@@ -47,8 +47,8 @@ function Tabs() {
           borderTopColor: theme.colors.border,
           borderTopWidth: StyleSheet.hairlineWidth,
           // Android needs the extra height to keep labels off the gesture bar.
+          // iOS keeps the default height — adding padding there clips the labels.
           height: Platform.OS === 'android' ? 64 : undefined,
-          paddingTop: 6,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarIcon: ({ focused, color, size }) => (
