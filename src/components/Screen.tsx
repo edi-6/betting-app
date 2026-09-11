@@ -1,4 +1,5 @@
-import React, { useMemo } from 'react';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import React, { useContext, useMemo } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -44,6 +45,8 @@ export function Screen({
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  // Undefined on the modal stack screens, which have no tab bar to clear.
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
 
   const styles = useMemo(
     () =>
@@ -61,11 +64,12 @@ export function Screen({
         headerText: { flex: 1, gap: 2 },
         content: {
           paddingHorizontal: theme.spacing(5),
-          paddingBottom: insets.bottom + theme.spacing(6) + bottomInset,
+          paddingBottom:
+            (tabBarHeight > 0 ? tabBarHeight : insets.bottom) + theme.spacing(6) + bottomInset,
           gap: theme.spacing(4),
         },
       }),
-    [theme, insets.bottom, bottomInset],
+    [theme, insets.bottom, bottomInset, tabBarHeight],
   );
 
   const header = title ? (

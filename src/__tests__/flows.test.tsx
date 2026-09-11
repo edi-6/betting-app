@@ -74,6 +74,24 @@ describe('settings', () => {
     expect(screen.getAllByText('+150').length).toBeGreaterThan(0);
   });
 
+  it('toggles glass effects and reports what the device supports', async () => {
+    renderApp();
+    await waitForDashboard();
+
+    fireEvent.press(screen.getByLabelText('Settings'));
+    await waitFor(() => expect(screen.getByText('Glass effects')).toBeTruthy());
+
+    // The caption names the material actually in use, so the setting is never a
+    // silent no-op on a device that cannot render Liquid Glass.
+    expect(
+      screen.queryByText(/Liquid Glass|reduce transparency|Translucent tab bar/),
+    ).toBeTruthy();
+
+    fireEvent(screen.getByText('Glass effects'), 'press');
+    fireEvent.press(screen.getByText('Done'));
+    await waitForDashboard();
+  });
+
   it('switches to the light theme without crashing', async () => {
     renderApp();
     await waitForDashboard();

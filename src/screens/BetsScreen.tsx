@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,6 +43,7 @@ const QUICK_STATUSES: BetStatus[] = ['pending', 'won', 'lost', 'void', 'cashed_o
 export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
   const { bets } = useApp();
   const { money, signedMoney } = useFormatters();
 
@@ -147,7 +149,7 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
         summaryItem: { alignItems: 'center', gap: 1 },
         listContent: {
           paddingHorizontal: theme.spacing(5),
-          paddingBottom: insets.bottom + theme.spacing(24),
+          paddingBottom: (tabBarHeight > 0 ? tabBarHeight : insets.bottom) + theme.spacing(22),
           gap: theme.spacing(3),
         },
         sectionHeader: {
@@ -157,7 +159,7 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
         },
         sheetSection: { gap: theme.spacing(2), marginBottom: theme.spacing(5) },
       }),
-    [theme, insets.bottom, activeCount],
+    [theme, insets.bottom, tabBarHeight, activeCount],
   );
 
   return (

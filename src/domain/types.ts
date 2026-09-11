@@ -112,6 +112,12 @@ export interface Settings {
   /** Kelly fraction (0–1) used by the staking calculator, e.g. 0.25 for quarter-Kelly. */
   kellyFraction: number;
   hapticsEnabled: boolean;
+  /**
+   * Render floating chrome (tab bar, sheets, the action button) as translucent glass.
+   * Falls back automatically on devices without Liquid Glass, and is ignored entirely
+   * when the system "reduce transparency" setting is on.
+   */
+  glassEnabled: boolean;
   /** Set once the user has acknowledged the responsible-gambling notice. */
   disclaimerAcceptedAt?: string;
 }

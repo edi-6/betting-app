@@ -2,7 +2,8 @@ import React, { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useTheme } from '../theme';
+import { useGlass, useTheme } from '../theme';
+import { GlassSurface } from './GlassSurface';
 import { Icon } from './Icon';
 import { Text } from './Text';
 
@@ -29,20 +30,23 @@ export function Sheet({
   maxHeightRatio = 0.86,
 }: SheetProps) {
   const theme = useTheme();
+  const glass = useGlass();
   const insets = useSafeAreaInsets();
+  const translucent = glass !== 'solid';
 
   const styles = useMemo(
     () =>
       StyleSheet.create({
         backdrop: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end' },
         sheet: {
-          backgroundColor: theme.colors.backgroundElevated,
+          backgroundColor: translucent ? 'transparent' : theme.colors.backgroundElevated,
           borderTopLeftRadius: theme.radius.xl,
           borderTopRightRadius: theme.radius.xl,
           maxHeight: `${Math.round(maxHeightRatio * 100)}%`,
           paddingBottom: insets.bottom + theme.spacing(2),
           borderTopWidth: StyleSheet.hairlineWidth,
           borderColor: theme.colors.border,
+          overflow: 'hidden',
         },
         grabber: {
           alignSelf: 'center',
@@ -80,7 +84,7 @@ export function Sheet({
           gap: theme.spacing(2),
         },
       }),
-    [theme, insets.bottom, maxHeightRatio],
+    [theme, insets.bottom, maxHeightRatio, translucent],
   );
 
   return (
@@ -93,6 +97,16 @@ export function Sheet({
     >
       <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Close">
         <Pressable style={styles.sheet} onPress={(event) => event.stopPropagation()}>
+          {translucent ? (
+            <GlassSurface
+              radius={0}
+              bordered={false}
+              glassStyle="regular"
+              intensity={85}
+              fallbackColor={theme.colors.backgroundElevated}
+              style={StyleSheet.absoluteFill}
+            />
+          ) : null}
           <View style={styles.grabber} />
           {title ? (
             <View style={styles.header}>

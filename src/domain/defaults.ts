@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: Settings = {
   limits: {},
   kellyFraction: 0.25,
   hapticsEnabled: true,
+  glassEnabled: true,
 };
 
 export function createEmptyData(): AppData {

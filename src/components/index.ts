@@ -5,6 +5,7 @@ export { Chip } from './Chip';
 export { DatePicker } from './DatePicker';
 export { EmptyState } from './EmptyState';
 export { Field } from './Field';
+export { GlassGroup, GlassSurface, withAlpha } from './GlassSurface';
 export { Icon, type IconName } from './Icon';
 export { KeyValueRow } from './KeyValueRow';
 export { ProgressBar } from './ProgressBar';

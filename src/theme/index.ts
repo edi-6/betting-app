@@ -1,2 +1,3 @@
 export * from './tokens';
-export { ThemeProvider, useTheme, useThemedStyles } from './ThemeProvider';
+export { ThemeProvider, useGlass, useTheme, useThemedStyles } from './ThemeProvider';
+export { ANDROID_BLUR_METHOD, deviceGlassCapability, type GlassCapability } from './glass';

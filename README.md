@@ -62,6 +62,9 @@ Seven tools under the **Tools** tab:
   committing your own records.
 
 ### Details that matter
+- **iOS 26 Liquid Glass** on the floating chrome — the tab bar, bottom sheets and the
+  action button are real glass that refracts the content scrolling behind them, with
+  Apple's interactive press response on the action button.
 - Dark and light themes that follow the system setting, or can be pinned.
 - Decimal, American or fractional odds throughout — one setting, applied everywhere.
 - 19 currencies, formatted without relying on the device's ICU build.
@@ -135,6 +138,35 @@ src/
   screens/               Dashboard, Bets, Bet form, Bet detail, Analytics, Bankroll, Tools, Settings
   navigation/            Typed bottom tabs + native stack
 ```
+
+### Liquid Glass, and what happens without it
+
+`GlassSurface` picks the best material the device offers and degrades cleanly:
+
+| Capability | Rendered with | When |
+| --- | --- | --- |
+| `liquid` | `GlassView` (`expo-glass-effect`) | iOS 26+, built against the iOS 26 SDK |
+| `blur` | `BlurView` (`expo-blur`) | older iOS, Android 12+, and web via `backdrop-filter` |
+| `solid` | an opaque fill | reduced transparency, or the user switches it off |
+
+Three rules keep it honest:
+
+1. **`isGlassEffectAPIAvailable()` is checked separately from `isLiquidGlassAvailable()`.**
+   Some iOS 26 betas ship the Liquid Glass *design* without the API behind it, and
+   touching `GlassView` on those builds crashes the app.
+2. **The system "reduce transparency" setting wins.** Apple requires glass to collapse to
+   a solid surface when it is on, so the effect is a progressive enhancement and never a
+   legibility risk. The detection is feature-detected, not platform-guessed — the API
+   does not exist on web at all.
+3. **Only floating chrome gets glass.** Cards, charts and stat tiles stay opaque. Glass
+   over a flat background has nothing to refract and just reads as a muddy rectangle.
+
+Settings → Display → Glass effects turns it off, and its caption names the material
+actually in use so the switch is never a silent no-op.
+
+Liquid Glass needs the app compiled against the iOS 26 SDK. EAS Build's current image
+does this automatically; the app opts in simply by *not* setting
+`UIDesignRequiresCompatibility` in `app.json`.
 
 ### Why settlement is a multiplier
 

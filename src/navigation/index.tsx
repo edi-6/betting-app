@@ -9,6 +9,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet } from 'react-native';
 
+import { GlassSurface } from '../components/GlassSurface';
 import { Icon, type IconName } from '../components/Icon';
 import { AnalyticsScreen } from '../screens/AnalyticsScreen';
 import { BankrollScreen } from '../screens/BankrollScreen';
@@ -18,7 +19,7 @@ import { BetsScreen } from '../screens/BetsScreen';
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import { ToolsScreen } from '../screens/ToolsScreen';
-import { useTheme } from '../theme';
+import { useGlass, useTheme } from '../theme';
 import type { RootStackParamList, TabParamList } from './types';
 
 const Tab = createBottomTabNavigator<TabParamList>();
@@ -34,6 +35,8 @@ const TAB_ICONS: Record<keyof TabParamList, { active: IconName; inactive: IconNa
 
 function Tabs() {
   const theme = useTheme();
+  const glass = useGlass();
+  const translucent = glass !== 'solid';
 
   return (
     <Tab.Navigator
@@ -42,14 +45,31 @@ function Tabs() {
         tabBarButtonTestID: `tab-${route.name}`,
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textMuted,
+        // When the bar is translucent it floats over the content, so it is absolutely
+        // positioned and painted by `tabBarBackground`. `Screen` pads its scroll view by
+        // the bar's height so nothing ends up trapped underneath.
         tabBarStyle: {
-          backgroundColor: theme.colors.tabBar,
+          position: translucent ? 'absolute' : 'relative',
+          backgroundColor: translucent ? 'transparent' : theme.colors.tabBar,
           borderTopColor: theme.colors.border,
-          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopWidth: translucent ? 0 : StyleSheet.hairlineWidth,
+          elevation: 0,
           // Android needs the extra height to keep labels off the gesture bar.
           // iOS keeps the default height — adding padding there clips the labels.
           height: Platform.OS === 'android' ? 64 : undefined,
         },
+        tabBarBackground: translucent
+          ? () => (
+              <GlassSurface
+                radius={0}
+                bordered={false}
+                glassStyle="clear"
+                intensity={80}
+                fallbackColor={theme.colors.tabBar}
+                style={[StyleSheet.absoluteFill, { borderTopWidth: StyleSheet.hairlineWidth, borderColor: theme.colors.border }]}
+              />
+            )
+          : undefined,
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
         tabBarIcon: ({ focused, color, size }) => (
           <Icon

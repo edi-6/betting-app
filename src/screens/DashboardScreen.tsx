@@ -333,7 +333,7 @@ export function DashboardScreen({ navigation }: TabScreenProps<'Dashboard'>) {
               value={clv.tracked > 0 ? formatPercent(clv.beatRate, 0) : '—'}
               caption={clv.tracked > 0 ? `${clv.tracked} priced` : 'add closing'}
               tone={clv.beatRate > 0.5 ? 'positive' : 'default'}
-              icon="speedometer-outline"
+              // No icon here: this label needs the full width of a compact tile.
               compact
             />
             <StatTile

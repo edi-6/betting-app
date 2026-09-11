@@ -85,6 +85,8 @@ YOUR DATA IS YOURS
 • No account, no sign-up, no servers, no tracking, no ads
 
 DETAILS
+Built for iOS 26: the tab bar, sheets and action button are real Liquid Glass that
+refracts the content moving behind them, and fall back gracefully on older devices.
 Dark and light themes. Decimal, American or fractional odds throughout. 19
 currencies. Works fully offline.
 

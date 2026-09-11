@@ -28,7 +28,7 @@ import type { OddsFormat, ResponsibleGamblingLimits, ThemeMode } from '../domain
 import { useFormatters } from '../hooks/useFormatters';
 import { useHaptics } from '../hooks/useHaptics';
 import { useApp } from '../store/AppStore';
-import { useTheme } from '../theme';
+import { useGlass, useTheme } from '../theme';
 import type { RootStackScreenProps } from '../navigation/types';
 
 const KELLY_OPTIONS = [
@@ -54,6 +54,22 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
     resetAll,
   } = useApp();
   const { currency } = useFormatters();
+  const glass = useGlass();
+
+  const glassDescription = useMemo(() => {
+    if (!settings.glassEnabled) {
+      return 'Translucent tab bar, sheets and action button';
+    }
+    switch (glass) {
+      case 'liquid':
+        return 'Using iOS 26 Liquid Glass';
+      case 'blur':
+        return 'Using a translucent blur — Liquid Glass needs iOS 26';
+      case 'solid':
+      default:
+        return 'Turned off by the system “reduce transparency” setting';
+    }
+  }, [glass, settings.glassEnabled]);
 
   const [busy, setBusy] = useState<string | null>(null);
   const summary = useMemo(() => summarize(bets), [bets]);
@@ -255,6 +271,23 @@ export function SettingsScreen({ navigation }: RootStackScreenProps<'Settings'>)
               ]}
               value={settings.themeMode}
               onChange={(value) => updateSettings({ themeMode: value as ThemeMode })}
+            />
+          </View>
+
+          <View style={styles.toggleRow}>
+            <View style={{ flex: 1 }}>
+              <Text variant="label" tone="secondary">
+                Glass effects
+              </Text>
+              <Text variant="caption" tone="muted">
+                {glassDescription}
+              </Text>
+            </View>
+            <Switch
+              value={settings.glassEnabled}
+              onValueChange={(value) => updateSettings({ glassEnabled: value })}
+              trackColor={{ false: theme.colors.surfaceSunken, true: theme.colors.primarySoft }}
+              thumbColor={settings.glassEnabled ? theme.colors.primary : theme.colors.neutral}
             />
           </View>
 

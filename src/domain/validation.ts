@@ -189,6 +189,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     limits: sanitizeLimits(raw.limits),
     kellyFraction: Math.min(Math.max(kellyFraction, 0), 1),
     hapticsEnabled: asBoolean(raw.hapticsEnabled, true),
+    glassEnabled: asBoolean(raw.glassEnabled, true),
     disclaimerAcceptedAt: asOptionalIsoDate(raw.disclaimerAcceptedAt),
   };
 }
