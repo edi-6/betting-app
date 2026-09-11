@@ -75,6 +75,16 @@ describe('deviceGlassCapability', () => {
     expect(deviceGlassCapability()).toBe('blur');
   });
 
+  it('falls back when the native module is missing entirely', () => {
+    // `requireNativeModule` throws in a runtime that does not bundle
+    // expo-glass-effect. That must degrade to a blur, not crash the app.
+    setPlatform('ios');
+    jest.mocked(GlassEffect.isGlassEffectAPIAvailable).mockImplementation(() => {
+      throw new Error("Cannot find native module 'ExpoGlassEffect'");
+    });
+    expect(deviceGlassCapability()).toBe('blur');
+  });
+
   it('never claims Liquid Glass off iOS', () => {
     mockAvailability(true);
     for (const os of ['android', 'web'] as const) {
