@@ -1,5 +1,5 @@
 import { BlurView } from 'expo-blur';
-import { GlassContainer, GlassView, type GlassStyle } from 'expo-glass-effect';
+import { GlassView, type GlassStyle } from 'expo-glass-effect';
 import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -119,29 +119,4 @@ export function withAlpha(color: string, alpha: number): string {
   const g = parseInt(hex.slice(2, 4), 16);
   const b = parseInt(hex.slice(4, 6), 16);
   return `rgba(${r}, ${g}, ${b}, ${Math.min(Math.max(alpha, 0), 1)})`;
-}
-
-/**
- * Groups glass elements so iOS 26 can merge them when they come close together.
- * A plain passthrough everywhere else.
- */
-export function GlassGroup({
-  children,
-  spacing = 12,
-  style,
-}: {
-  children: React.ReactNode;
-  spacing?: number;
-  style?: StyleProp<ViewStyle>;
-}) {
-  const glass = useGlass();
-
-  if (glass !== 'liquid') {
-    return <View style={style}>{children}</View>;
-  }
-  return (
-    <GlassContainer spacing={spacing} style={style}>
-      {children}
-    </GlassContainer>
-  );
 }

@@ -2,7 +2,6 @@ import {
   arbitrage,
   assessCashOut,
   breakEvenWinRate,
-  expectedRoiAtWinRate,
   expectedValue,
   hedge,
   kellyStake,
@@ -161,10 +160,5 @@ describe('break-even helpers', () => {
   it('reports the required win rate', () => {
     expect(breakEvenWinRate(2)).toBeCloseTo(0.5, 10);
     expect(breakEvenWinRate(1.91)).toBeCloseTo(0.5236, 4);
-  });
-
-  it('projects ROI from a win rate', () => {
-    expect(expectedRoiAtWinRate(2, 0.55)).toBeCloseTo(0.1, 10);
-    expect(expectedRoiAtWinRate(2, 0.5)).toBeCloseTo(0, 10);
   });
 });

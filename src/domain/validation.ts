@@ -97,7 +97,6 @@ export function sanitizeLeg(raw: unknown): Leg | null {
     odds,
     closingOdds: closingOdds !== undefined && isValidDecimalOdds(closingOdds) ? closingOdds : undefined,
     status: LEG_STATUS_VALUES.includes(status) ? status : 'pending',
-    startsAt: asOptionalIsoDate(raw.startsAt),
   };
 }
 

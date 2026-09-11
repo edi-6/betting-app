@@ -4,6 +4,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import type { KeyValueStore } from './data/storage';
 import type { AppData } from './domain/types';
+import { DisclaimerGate } from './components/DisclaimerGate';
 import { RootNavigator } from './navigation';
 import { AppProvider } from './store/AppStore';
 import { ThemeProvider, useTheme } from './theme';
@@ -14,6 +15,7 @@ function Shell() {
     <>
       <StatusBar style={theme.scheme === 'dark' ? 'light' : 'dark'} />
       <RootNavigator />
+      <DisclaimerGate />
     </>
   );
 }

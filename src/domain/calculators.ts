@@ -301,11 +301,3 @@ export function parlay(decimalOdds: number[], stake: number): ParlayResult {
 export function breakEvenWinRate(decimalOdds: number): number {
   return impliedProbability(decimalOdds);
 }
-
-/** Units of profit per unit staked if you win at these odds `winRate` of the time. */
-export function expectedRoiAtWinRate(decimalOdds: number, winRate: number): number {
-  if (!isValidDecimalOdds(decimalOdds) || !Number.isFinite(winRate)) {
-    return NaN;
-  }
-  return winRate * (decimalOdds - 1) - (1 - winRate);
-}

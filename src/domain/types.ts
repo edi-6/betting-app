@@ -41,8 +41,6 @@ export interface Leg {
   /** Decimal closing odds, used for CLV. Undefined when not recorded. */
   closingOdds?: number;
   status: LegStatus;
-  /** ISO-8601 timestamp of kick-off / tip-off. */
-  startsAt?: string;
 }
 
 export interface Bet {

@@ -7,6 +7,17 @@ import { createEmptyData } from '../domain/defaults';
 import { createDemoData } from '../domain/demo';
 import type { AppData, Bet } from '../domain/types';
 
+/**
+ * An empty ledger with the first-run notice already acknowledged. Every test except
+ * the disclaimer suite itself starts here — otherwise the gate covers the app and the
+ * assertions below would be checking a screen the user cannot actually see.
+ */
+function freshData() {
+  const data = createEmptyData();
+  data.settings.disclaimerAcceptedAt = '2026-01-01T00:00:00.000Z';
+  return data;
+}
+
 const demo = createDemoData(new Date('2026-09-11T12:00:00.000Z'));
 
 function renderApp(initialData: AppData = demo) {
@@ -177,9 +188,67 @@ describe('bets list', () => {
   });
 });
 
+describe('filter ranges', () => {
+  async function openFilters() {
+    renderApp(demo);
+    await waitForDashboard();
+    fireEvent.press(screen.getByTestId('tab-Bets'));
+    await screen.findByPlaceholderText('Search team, market, tag…');
+    fireEvent.press(screen.getByLabelText(/^Filters,/));
+    await waitFor(() => expect(screen.getByText('Filter & sort')).toBeTruthy());
+  }
+
+  it('narrows the ledger by odds range', async () => {
+    await openFilters();
+
+    // A floor no slip can meet must empty the list — proof the filter is wired
+    // through to `applyFilter` and not just held in component state.
+    const [minOdds] = screen.getAllByPlaceholderText('Min');
+    fireEvent.changeText(minOdds!, '9999');
+    fireEvent.press(screen.getByText('Show results'));
+
+    await waitFor(() => expect(screen.getByText('Nothing matches those filters')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Clear filters'));
+    await waitFor(() => expect(screen.queryByText('Nothing matches those filters')).toBeNull());
+  });
+
+  it('narrows the ledger by stake range', async () => {
+    await openFilters();
+
+    // Two "Max" inputs in the sheet: odds first, then stake.
+    const maxFields = screen.getAllByPlaceholderText('Max');
+    fireEvent.changeText(maxFields[1]!, '0.01');
+    fireEvent.press(screen.getByText('Show results'));
+
+    await waitFor(() => expect(screen.getByText('Nothing matches those filters')).toBeTruthy());
+  });
+
+  it('accepts a custom date window', async () => {
+    await openFilters();
+
+    fireEvent.press(screen.getByText('Custom'));
+    await waitFor(() => expect(screen.getByText('From')).toBeTruthy());
+    expect(screen.getByText('To')).toBeTruthy();
+    expect(screen.getByLabelText('Filters, 1 active')).toBeTruthy();
+  });
+
+  it('clears the range inputs on reset', async () => {
+    await openFilters();
+
+    const [minOdds] = screen.getAllByPlaceholderText('Min');
+    fireEvent.changeText(minOdds!, '5');
+    await waitFor(() => expect(screen.getByLabelText('Filters, 1 active')).toBeTruthy());
+
+    fireEvent.press(screen.getByText('Reset'));
+    await waitFor(() => expect(screen.getByLabelText('Filters, 0 active')).toBeTruthy());
+    expect(screen.getAllByPlaceholderText('Min')[0]!.props.value).toBe('');
+  });
+});
+
 describe('building a parlay', () => {
   it('adds a second leg and multiplies the odds', async () => {
-    renderApp(createEmptyData());
+    renderApp(freshData());
     await waitFor(() => expect(screen.getByText('Add your first bet')).toBeTruthy());
     fireEvent.press(screen.getByText('Add your first bet'));
     await waitFor(() => expect(screen.getByText('New bet')).toBeTruthy());
@@ -206,7 +275,7 @@ describe('building a parlay', () => {
 
 describe('bet detail', () => {
   it('shows closing line value when a closing price is recorded', async () => {
-    const data = createEmptyData();
+    const data = freshData();
     data.bets = [
       openBet({
         legs: [
@@ -235,7 +304,7 @@ describe('bet detail', () => {
   });
 
   it('records a cash out and lets you undo it', async () => {
-    const data = createEmptyData();
+    const data = freshData();
     data.bets = [openBet()];
 
     renderApp(data);
@@ -258,7 +327,7 @@ describe('bet detail', () => {
   });
 
   it('grades individual legs of a parlay', async () => {
-    const data = createEmptyData();
+    const data = freshData();
     data.bets = [
       openBet({
         legs: [
@@ -304,7 +373,7 @@ describe('bet detail', () => {
   });
 
   it('edits a bet and persists the change', async () => {
-    const data = createEmptyData();
+    const data = freshData();
     data.bets = [openBet()];
 
     renderApp(data);
@@ -325,7 +394,7 @@ describe('bet detail', () => {
 
 describe('bankroll transactions', () => {
   it('adds a deposit and updates the balance', async () => {
-    const data = createEmptyData();
+    const data = freshData();
     data.settings.startingBankroll = 1000;
 
     renderApp(data);
@@ -346,10 +415,40 @@ describe('bankroll transactions', () => {
   });
 });
 
+describe('editing a transaction', () => {
+  it('corrects an amount without deleting and re-adding', async () => {
+    const data = freshData();
+    data.settings.startingBankroll = 1000;
+
+    renderApp(data);
+    await waitFor(() => expect(screen.getByText("Let's get your ledger started")).toBeTruthy());
+    fireEvent.press(screen.getByTestId('tab-Bankroll'));
+    await waitFor(() => expect(screen.getByText('Current balance')).toBeTruthy());
+
+    // Add a deposit with the wrong amount.
+    fireEvent.press(screen.getByTestId('bankroll-fab'));
+    await waitFor(() => expect(screen.getByText('Record a transaction')).toBeTruthy());
+    fireEvent.changeText(screen.getByPlaceholderText('100'), '500');
+    fireEvent.press(screen.getByTestId('save-transaction'));
+    await waitFor(() => expect(screen.getByText('Transactions (1)')).toBeTruthy());
+    expect(screen.getAllByText('$1,500.00').length).toBeGreaterThan(0);
+
+    // Tap the row to correct it.
+    fireEvent.press(screen.getByLabelText(/^Edit deposit of/));
+    await waitFor(() => expect(screen.getByText('Edit transaction')).toBeTruthy());
+    fireEvent.changeText(screen.getByDisplayValue('500'), '250');
+    fireEvent.press(screen.getByTestId('save-transaction'));
+
+    await waitFor(() => expect(screen.getAllByText('$1,250.00').length).toBeGreaterThan(0));
+    // Still a single transaction — it was edited, not duplicated.
+    expect(screen.getByText('Transactions (1)')).toBeTruthy();
+  });
+});
+
 describe('responsible gambling limits', () => {
   it('warns on the dashboard once a limit is breached', async () => {
     const today = new Date();
-    const data = createEmptyData();
+    const data = freshData();
     data.settings.startingBankroll = 1000;
     data.settings.limits = { dailyStakeLimit: 50 };
     data.bets = [
@@ -364,7 +463,7 @@ describe('responsible gambling limits', () => {
 });
 
 function withSingleBet(): AppData {
-  const data = createEmptyData();
+  const data = freshData();
   data.bets = [openBet()];
   return data;
 }

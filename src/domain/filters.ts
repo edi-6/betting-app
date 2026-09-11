@@ -198,12 +198,6 @@ export function sortBets(bets: Bet[], key: SortKey): Bet[] {
   }
 }
 
-export interface BetSection {
-  title: string;
-  key: string;
-  data: Bet[];
-}
-
 /** Distinct values across the dataset, used to populate the filter sheet. */
 export function facetsFor(bets: Bet[]): {
   sports: string[];

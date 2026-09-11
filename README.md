@@ -18,6 +18,8 @@ results, and every byte of data stays on the device.
 - **Closing odds** per leg, which unlocks closing line value analysis.
 - Bookmaker, tags, 1–5 confidence rating, free-text notes and the exact time the bet was struck.
 - One-tap grading from the bet detail screen, or per-leg grading for parlays.
+- Filter the ledger by status, sport, league, bookmaker, tag, bet type, odds range,
+  stake range, and either a preset or a custom date window.
 
 ### Analyse
 - **Overview** — cumulative profit curve (scrub it with your finger), ROI, turnover, win rate,
@@ -34,7 +36,8 @@ results, and every byte of data stays on the device.
 
 ### Manage the bankroll
 - Balance, available funds and money currently at risk, all derived rather than typed in.
-- Deposits, withdrawals and manual adjustments, with a balance-over-time chart.
+- Deposits, withdrawals and manual adjustments, with a balance-over-time chart. Tap any
+  entry to correct it — no delete-and-retype.
 - **Responsible-gambling guard rails**: daily stake cap, bets-per-day cap, weekly and monthly loss
   limits, and a maximum stake as a share of bankroll. Limits warn — they never silently block you —
   and the dashboard surfaces a breach the moment it happens.
@@ -62,6 +65,8 @@ Seven tools under the **Tools** tab:
   committing your own records.
 
 ### Details that matter
+- A first-run notice that states plainly what the app is and is not — a journal, not a
+  bookmaker; no tips; nothing leaves the device — before any bet goes in.
 - **iOS 26 Liquid Glass** on the floating chrome — the tab bar, bottom sheets and the
   action button are real glass that refracts the content scrolling behind them, with
   Apple's interactive press response on the action button.
@@ -212,7 +217,7 @@ schema changes.
 
 ## Tests
 
-256 tests across 15 suites:
+276 tests across 16 suites:
 
 - **Domain** — odds conversion round-trips, all four de-vig methods, every settlement case,
   analytics against hand-computed figures, Kelly against the textbook formula, arbitrage stake

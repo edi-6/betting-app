@@ -33,17 +33,6 @@ export const MONTH_ABBREVIATIONS = [
   'Dec',
 ] as const;
 
-/** Index 0 = Sunday, matching `Date.prototype.getDay`. */
-export const WEEKDAY_NAMES = [
-  'Sunday',
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-] as const;
-
 export const WEEKDAY_ABBREVIATIONS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'] as const;
 
 export function toDate(value: string | number | Date): Date {
@@ -54,19 +43,9 @@ export function isValidDate(value: Date): boolean {
   return value instanceof Date && !Number.isNaN(value.getTime());
 }
 
-export function toIso(value: string | number | Date): string {
-  return toDate(value).toISOString();
-}
-
 export function startOfDay(value: string | number | Date): Date {
   const date = toDate(value);
   date.setHours(0, 0, 0, 0);
-  return date;
-}
-
-export function endOfDay(value: string | number | Date): Date {
-  const date = toDate(value);
-  date.setHours(23, 59, 59, 999);
   return date;
 }
 
@@ -127,10 +106,6 @@ export function monthKeyLabel(key: string): string {
   return `${name} ${year ?? ''}`.trim();
 }
 
-export function isSameDay(a: string | number | Date, b: string | number | Date): boolean {
-  return dayKey(a) === dayKey(b);
-}
-
 export function daysBetween(a: string | number | Date, b: string | number | Date): number {
   const millis = startOfDay(b).getTime() - startOfDay(a).getTime();
   return Math.round(millis / 86400000);
@@ -176,18 +151,6 @@ export function formatRelativeDay(value: string | number | Date, now: Date = new
   if (diff > 1 && diff < 7) return `${diff} days ago`;
   if (diff < -1 && diff > -7) return `In ${Math.abs(diff)} days`;
   return formatDate(value);
-}
-
-/** Inclusive list of "YYYY-MM" keys between two dates. */
-export function monthKeysBetween(from: Date, to: Date): string[] {
-  const keys: string[] = [];
-  let cursor = startOfMonth(from);
-  const end = startOfMonth(to);
-  while (cursor.getTime() <= end.getTime() && keys.length < 600) {
-    keys.push(monthKey(cursor));
-    cursor = addMonths(cursor, 1);
-  }
-  return keys;
 }
 
 /** Build a local Date from Y/M/D plus optional H:M, avoiding timezone drift. */

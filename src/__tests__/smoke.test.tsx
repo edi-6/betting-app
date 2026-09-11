@@ -7,6 +7,17 @@ import { summarize } from '../domain/analytics';
 import { createDemoData } from '../domain/demo';
 import { createEmptyData } from '../domain/defaults';
 
+/**
+ * An empty ledger with the first-run notice already acknowledged. Every test except
+ * the disclaimer suite itself starts here — otherwise the gate covers the app and the
+ * assertions below would be checking a screen the user cannot actually see.
+ */
+function freshData() {
+  const data = createEmptyData();
+  data.settings.disclaimerAcceptedAt = '2026-01-01T00:00:00.000Z';
+  return data;
+}
+
 const demo = createDemoData(new Date('2026-09-11T12:00:00.000Z'));
 
 function renderApp(initialData = demo) {
@@ -39,6 +50,41 @@ async function waitForDashboard() {
   await waitFor(() => expect(screen.getByText('Recent activity')).toBeTruthy());
 }
 
+describe('first-run notice', () => {
+  it('gates a brand-new install until it is acknowledged', async () => {
+    render(<AppRoot store={createMemoryStore()} initialData={createEmptyData()} />);
+    await waitFor(() => expect(screen.getByTestId('disclaimer-gate')).toBeTruthy());
+    expect(screen.getByText('Before you start')).toBeTruthy();
+    expect(screen.getByText('A record, not a bookmaker')).toBeTruthy();
+    expect(screen.getByText('No tips, no predictions')).toBeTruthy();
+  });
+
+  it('dismisses once acknowledged and remembers the answer', async () => {
+    const store = createMemoryStore();
+    const { unmount } = render(<AppRoot store={store} initialData={createEmptyData()} />);
+
+    await waitFor(() => expect(screen.getByTestId('disclaimer-gate')).toBeTruthy());
+    fireEvent.press(screen.getByTestId('accept-disclaimer'));
+    await waitFor(() => expect(screen.queryByTestId('disclaimer-gate')).toBeNull());
+
+    await waitFor(async () =>
+      expect(await store.getItem('betledger/app-data/v1')).toContain('disclaimerAcceptedAt'),
+    );
+    unmount();
+
+    // A returning user never sees it again.
+    render(<AppRoot store={store} />);
+    await waitFor(() => expect(screen.getByText('Add your first bet')).toBeTruthy());
+    expect(screen.queryByTestId('disclaimer-gate')).toBeNull();
+  });
+
+  it('never shows for a ledger that already accepted it', async () => {
+    render(<AppRoot store={createMemoryStore()} initialData={freshData()} />);
+    await waitFor(() => expect(screen.getByText('Add your first bet')).toBeTruthy());
+    expect(screen.queryByTestId('disclaimer-gate')).toBeNull();
+  });
+});
+
 describe('first launch', () => {
   it('shows the onboarding empty state', async () => {
     render(<AppRoot store={createMemoryStore()} />);
@@ -48,7 +94,7 @@ describe('first launch', () => {
   });
 
   it('fills the dashboard once demo data is loaded', async () => {
-    render(<AppRoot store={createMemoryStore()} initialData={createEmptyData()} />);
+    render(<AppRoot store={createMemoryStore()} initialData={freshData()} />);
     fireEvent.press(screen.getByText('Load demo data'));
     await waitForDashboard();
     expect(screen.getByText('Profit over time')).toBeTruthy();
@@ -174,7 +220,7 @@ describe('bankroll', () => {
 
 describe('adding a bet end to end', () => {
   it('saves a new single and shows it in the ledger', async () => {
-    render(<AppRoot store={createMemoryStore()} initialData={createEmptyData()} />);
+    render(<AppRoot store={createMemoryStore()} initialData={freshData()} />);
 
     await waitFor(() => expect(screen.getByText('Add your first bet')).toBeTruthy());
     fireEvent.press(screen.getByText('Add your first bet'));
@@ -197,7 +243,7 @@ describe('adding a bet end to end', () => {
   });
 
   it('refuses to save without a stake or odds', async () => {
-    render(<AppRoot store={createMemoryStore()} initialData={createEmptyData()} />);
+    render(<AppRoot store={createMemoryStore()} initialData={freshData()} />);
     await waitFor(() => expect(screen.getByText('Add your first bet')).toBeTruthy());
     fireEvent.press(screen.getByText('Add your first bet'));
     await waitFor(() => expect(screen.getByText('New bet')).toBeTruthy());
@@ -213,7 +259,7 @@ describe('adding a bet end to end', () => {
 
 describe('grading a bet', () => {
   it('settles an open bet from the detail screen', async () => {
-    const data = createEmptyData();
+    const data = freshData();
     data.bets = [
       {
         id: 'bet-1',
@@ -254,7 +300,7 @@ describe('grading a bet', () => {
 describe('persistence', () => {
   it('writes to the store and reads it back', async () => {
     const store = createMemoryStore();
-    const { unmount } = render(<AppRoot store={store} initialData={createEmptyData()} />);
+    const { unmount } = render(<AppRoot store={store} initialData={freshData()} />);
 
     fireEvent.press(screen.getByText('Load demo data'));
     await waitForDashboard();

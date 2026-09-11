@@ -10,10 +10,8 @@ import {
   formatRelativeDay,
   formatShortDate,
   formatTime,
-  isSameDay,
   monthKey,
   monthKeyLabel,
-  monthKeysBetween,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -76,16 +74,6 @@ describe('keys', () => {
 
   it('labels a month key', () => {
     expect(monthKeyLabel('2026-09')).toBe('Sep 2026');
-  });
-
-  it('lists the months in a range inclusively', () => {
-    const keys = monthKeysBetween(buildDate(2026, 0, 15), buildDate(2026, 3, 2));
-    expect(keys).toEqual(['2026-01', '2026-02', '2026-03', '2026-04']);
-  });
-
-  it('compares days', () => {
-    expect(isSameDay(buildDate(2026, 2, 11, 1), buildDate(2026, 2, 11, 23))).toBe(true);
-    expect(isSameDay(buildDate(2026, 2, 11), buildDate(2026, 2, 12))).toBe(false);
   });
 });
 

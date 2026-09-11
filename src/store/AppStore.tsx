@@ -372,7 +372,3 @@ export function useApp(): AppContextValue {
 export function useSettings(): Settings {
   return useApp().settings;
 }
-
-export function useBets(): Bet[] {
-  return useApp().bets;
-}

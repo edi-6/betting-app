@@ -7,7 +7,7 @@ import { createEmptyData } from '../../domain/defaults';
 import { createMemoryStore } from '../../data/storage';
 import { AppProvider } from '../../store/AppStore';
 import { deviceGlassCapability, ThemeProvider } from '../../theme';
-import { GlassGroup, GlassSurface, withAlpha } from '../GlassSurface';
+import { GlassSurface, withAlpha } from '../GlassSurface';
 
 // The availability checks are native calls. Drive them explicitly so both the
 // Liquid Glass path and the blur fallback are exercised on purpose rather than by
@@ -37,6 +37,7 @@ afterEach(() => {
 function wrap(ui: React.ReactElement, glassEnabled = true) {
   const data = createEmptyData();
   data.settings.glassEnabled = glassEnabled;
+  data.settings.disclaimerAcceptedAt = '2026-01-01T00:00:00.000Z';
   return render(
     <AppProvider store={createMemoryStore()} initialData={data}>
       <ThemeProvider>{ui}</ThemeProvider>
@@ -152,15 +153,5 @@ describe('GlassSurface', () => {
     const flattened = Object.assign({}, ...styles.filter(Boolean));
     expect(flattened.backgroundColor).toBe('#101725');
     expect(screen.getByText('Solid')).toBeTruthy();
-  });
-
-  it('groups children without dropping them when glass is unavailable', () => {
-    wrap(
-      <GlassGroup>
-        <RNText>Grouped</RNText>
-      </GlassGroup>,
-      false,
-    );
-    expect(screen.getByText('Grouped')).toBeTruthy();
   });
 });

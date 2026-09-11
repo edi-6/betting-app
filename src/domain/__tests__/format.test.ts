@@ -7,7 +7,6 @@ import {
   formatSignedCurrency,
   formatSignedPercent,
   parseAmount,
-  pluralize,
   roundTo,
 } from '../format';
 
@@ -97,13 +96,5 @@ describe('parseAmount', () => {
     expect(parseAmount('-15')).toBe(-15);
     expect(parseAmount('')).toBeNull();
     expect(parseAmount('abc')).toBeNull();
-  });
-});
-
-describe('pluralize', () => {
-  it('picks the right form', () => {
-    expect(pluralize(1, 'bet')).toBe('bet');
-    expect(pluralize(2, 'bet')).toBe('bets');
-    expect(pluralize(0, 'match', 'matches')).toBe('matches');
   });
 });

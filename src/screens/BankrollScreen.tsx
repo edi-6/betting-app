@@ -43,11 +43,20 @@ const TRANSACTION_LABELS: Record<TransactionType, string> = {
 export function BankrollScreen({ navigation }: TabScreenProps<'Bankroll'>) {
   const theme = useTheme();
   const haptics = useHaptics();
-  const { bets, transactions, settings, addTransaction, deleteTransaction, updateSettings } =
-    useApp();
+  const {
+    bets,
+    transactions,
+    settings,
+    addTransaction,
+    updateTransaction,
+    deleteTransaction,
+    updateSettings,
+  } = useApp();
   const { money, signedMoney, currency } = useFormatters();
 
   const [formOpen, setFormOpen] = useState(false);
+  // Set while editing an existing row; null means the form is adding a new one.
+  const [editing, setEditing] = useState<Transaction | null>(null);
   const [type, setType] = useState<TransactionType>('deposit');
   const [amountText, setAmountText] = useState('');
   const [bookmaker, setBookmaker] = useState('');
@@ -88,24 +97,49 @@ export function BankrollScreen({ navigation }: TabScreenProps<'Bankroll'>) {
     [transactions],
   );
 
+  const openForm = useCallback((transaction: Transaction | null) => {
+    setEditing(transaction);
+    setType(transaction?.type ?? 'deposit');
+    setAmountText(transaction ? String(Math.abs(transaction.amount)) : '');
+    setBookmaker(transaction?.bookmaker ?? '');
+    setNote(transaction?.note ?? '');
+    setDate(transaction?.date ?? new Date().toISOString());
+    setFormOpen(true);
+  }, []);
+
   const submit = useCallback(() => {
     const amount = parseAmount(amountText);
     if (amount === null || amount === 0) {
       Alert.alert('Enter an amount', 'Type how much moved in or out.');
       return;
     }
+    const signed = type === 'adjustment' ? amount : Math.abs(amount);
     haptics('success');
-    addTransaction({
-      type,
-      amount: type === 'adjustment' ? amount : Math.abs(amount),
-      date,
-      bookmaker: bookmaker.trim().length > 0 ? bookmaker.trim() : undefined,
-      note: note.trim().length > 0 ? note.trim() : undefined,
-    });
+
+    if (editing) {
+      updateTransaction({
+        ...editing,
+        type,
+        amount: signed,
+        date,
+        bookmaker: bookmaker.trim().length > 0 ? bookmaker.trim() : undefined,
+        note: note.trim().length > 0 ? note.trim() : undefined,
+      });
+    } else {
+      addTransaction({
+        type,
+        amount: signed,
+        date,
+        bookmaker: bookmaker.trim().length > 0 ? bookmaker.trim() : undefined,
+        note: note.trim().length > 0 ? note.trim() : undefined,
+      });
+    }
+
     setAmountText('');
     setNote('');
+    setEditing(null);
     setFormOpen(false);
-  }, [amountText, type, date, bookmaker, note, addTransaction, haptics]);
+  }, [amountText, type, date, bookmaker, note, editing, addTransaction, updateTransaction, haptics]);
 
   const confirmDeleteTransaction = useCallback(
     (transaction: Transaction) => {
@@ -349,8 +383,10 @@ export function BankrollScreen({ navigation }: TabScreenProps<'Bankroll'>) {
               return (
                 <Pressable
                   key={transaction.id}
+                  onPress={() => openForm(transaction)}
                   onLongPress={() => confirmDeleteTransaction(transaction)}
                   accessibilityRole="button"
+                  accessibilityLabel={`Edit ${TRANSACTION_LABELS[transaction.type].toLowerCase()} of ${signedMoney(signed)}`}
                   accessibilityHint="Long press to delete"
                   style={[
                     styles.transactionRow,
@@ -389,7 +425,7 @@ export function BankrollScreen({ navigation }: TabScreenProps<'Bankroll'>) {
 
         {transactions.length > 0 ? (
           <Text variant="caption" tone="muted" align="center">
-            Long-press a transaction to delete it.
+            Tap a transaction to edit it, or long-press to delete.
           </Text>
         ) : null}
       </Screen>
@@ -397,20 +433,45 @@ export function BankrollScreen({ navigation }: TabScreenProps<'Bankroll'>) {
       <Fab
         label="Add funds"
         icon="add"
-        onPress={() => {
-          setType('deposit');
-          setDate(new Date().toISOString());
-          setFormOpen(true);
-        }}
+        onPress={() => openForm(null)}
         testID="bankroll-fab"
       />
 
       <Sheet
         visible={formOpen}
-        onClose={() => setFormOpen(false)}
-        title="Record a transaction"
+        onClose={() => {
+          setEditing(null);
+          setFormOpen(false);
+        }}
+        title={editing ? 'Edit transaction' : 'Record a transaction'}
         subtitle={`Balance right now: ${money(bankroll.balance)}`}
-        footer={<Button label="Save" fullWidth testID="save-transaction" onPress={submit} />}
+        footer={
+          <View style={{ flexDirection: 'row', gap: theme.spacing(3) }}>
+            {editing ? (
+              <Button
+                label="Delete"
+                variant="danger"
+                fullWidth
+                style={{ flex: 1 }}
+                onPress={() => {
+                  const target = editing;
+                  setEditing(null);
+                  setFormOpen(false);
+                  confirmDeleteTransaction(target);
+                }}
+              />
+            ) : null}
+            <Button
+              label="Save"
+              // `fullWidth` alone only stretches the cross axis inside a row, so the
+              // button needs an explicit flex to fill the footer's width.
+              fullWidth
+              style={{ flex: editing ? 2 : 1 }}
+              testID="save-transaction"
+              onPress={submit}
+            />
+          </View>
+        }
       >
         <View style={styles.formSection}>
           <SegmentedControl

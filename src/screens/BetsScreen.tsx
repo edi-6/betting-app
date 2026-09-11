@@ -7,6 +7,7 @@ import {
   BetCard,
   Button,
   Chip,
+  DatePicker,
   EmptyState,
   Fab,
   Field,
@@ -17,8 +18,8 @@ import {
   Text,
 } from '../components';
 import { summarize } from '../domain/analytics';
-import { formatRelativeDay } from '../domain/dates';
-import { formatSignedPercent } from '../domain/format';
+import { addDays, formatRelativeDay } from '../domain/dates';
+import { formatSignedPercent, parseAmount } from '../domain/format';
 import {
   applyFilter,
   countActiveFilters,
@@ -45,11 +46,14 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
   const insets = useSafeAreaInsets();
   const tabBarHeight = useContext(BottomTabBarHeightContext) ?? 0;
   const { bets } = useApp();
-  const { money, signedMoney } = useFormatters();
+  const { money, signedMoney, currency } = useFormatters();
 
   const [filter, setFilter] = useState<BetFilter>(EMPTY_FILTER);
   const [sort, setSort] = useState<SortKey>('date_desc');
   const [filterOpen, setFilterOpen] = useState(false);
+  // The range inputs are free text while being typed; the filter keeps the parsed
+  // number, so an in-progress value like "1." never wipes the list.
+  const [ranges, setRanges] = useState({ minOdds: '', maxOdds: '', minStake: '', maxStake: '' });
 
   // Deep link from the dashboard's "open bets" shortcut. Adjusting state during render
   // (rather than in an effect) keeps the list from flashing the unfiltered results first.
@@ -92,6 +96,23 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
         ? current.statuses.filter((value) => value !== status)
         : [...current.statuses, status],
     }));
+  }, []);
+
+  const setRange = useCallback(
+    (key: 'minOdds' | 'maxOdds' | 'minStake' | 'maxStake', text: string) => {
+      setRanges((current) => ({ ...current, [key]: text }));
+      const parsed = parseAmount(text);
+      setFilter((current) => ({
+        ...current,
+        [key]: parsed !== null && parsed > 0 ? parsed : undefined,
+      }));
+    },
+    [],
+  );
+
+  const resetFilters = useCallback(() => {
+    setFilter(EMPTY_FILTER);
+    setRanges({ minOdds: '', maxOdds: '', minStake: '', maxStake: '' });
   }, []);
 
   const toggleValue = useCallback((key: 'sports' | 'leagues' | 'bookmakers' | 'tags', value: string) => {
@@ -158,6 +179,7 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
           paddingBottom: theme.spacing(1),
         },
         sheetSection: { gap: theme.spacing(2), marginBottom: theme.spacing(5) },
+        rangeRow: { flexDirection: 'row', gap: theme.spacing(3) },
       }),
     [theme, insets.bottom, tabBarHeight, activeCount],
   );
@@ -307,7 +329,7 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
             <Button
               label="Reset"
               variant="secondary"
-              onPress={() => setFilter(EMPTY_FILTER)}
+              onPress={resetFilters}
               style={{ flex: 1 }}
             />
             <Button label="Show results" onPress={() => setFilterOpen(false)} style={{ flex: 2 }} />
@@ -331,13 +353,91 @@ export function BetsScreen({ navigation, route }: TabScreenProps<'Bets'>) {
             Date range
           </Text>
           <SegmentedControl
-            segments={DATE_RANGE_PRESETS.map((preset) => ({
-              value: preset.key,
-              label: preset.label,
-            }))}
+            scrollable
+            segments={[
+              ...DATE_RANGE_PRESETS.map((preset) => ({ value: preset.key, label: preset.label })),
+              { value: 'custom' as const, label: 'Custom' },
+            ]}
             value={filter.range}
-            onChange={(range) => setFilter((current) => ({ ...current, range }))}
+            onChange={(range) =>
+              setFilter((current) => ({
+                ...current,
+                range,
+                // Seed a sensible window the first time Custom is chosen.
+                from: range === 'custom' ? (current.from ?? addDays(new Date(), -30).toISOString()) : current.from,
+                to: range === 'custom' ? (current.to ?? new Date().toISOString()) : current.to,
+              }))
+            }
           />
+          {filter.range === 'custom' ? (
+            <View style={styles.rangeRow}>
+              <View style={{ flex: 1 }}>
+                <DatePicker
+                  label="From"
+                  value={filter.from ?? addDays(new Date(), -30).toISOString()}
+                  onChange={(from) => setFilter((current) => ({ ...current, from }))}
+                  withTime={false}
+                />
+              </View>
+              <View style={{ flex: 1 }}>
+                <DatePicker
+                  label="To"
+                  value={filter.to ?? new Date().toISOString()}
+                  onChange={(to) => setFilter((current) => ({ ...current, to }))}
+                  withTime={false}
+                />
+              </View>
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.sheetSection}>
+          <Text variant="label" tone="secondary">
+            Odds range
+          </Text>
+          <View style={styles.rangeRow}>
+            <Field
+              containerStyle={{ flex: 1 }}
+              value={ranges.minOdds}
+              onChangeText={(text) => setRange('minOdds', text)}
+              placeholder="Min"
+              keyboardType="decimal-pad"
+            />
+            <Field
+              containerStyle={{ flex: 1 }}
+              value={ranges.maxOdds}
+              onChangeText={(text) => setRange('maxOdds', text)}
+              placeholder="Max"
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <Text variant="caption" tone="muted">
+            Decimal odds for the whole slip, so a parlay is matched on its combined price.
+          </Text>
+        </View>
+
+        <View style={styles.sheetSection}>
+          <Text variant="label" tone="secondary">
+            Stake range
+          </Text>
+          <View style={styles.rangeRow}>
+            <Field
+              containerStyle={{ flex: 1 }}
+              value={ranges.minStake}
+              onChangeText={(text) => setRange('minStake', text)}
+              placeholder="Min"
+              keyboardType="decimal-pad"
+              prefix={currency}
+            />
+            <Field
+              containerStyle={{ flex: 1 }}
+              value={ranges.maxStake}
+              onChangeText={(text) => setRange('maxStake', text)}
+              placeholder="Max"
+              keyboardType="decimal-pad"
+              prefix={currency}
+            />
+          </View>
         </View>
 
         <View style={styles.sheetSection}>

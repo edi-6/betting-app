@@ -143,7 +143,3 @@ export function parseAmount(input: string): number | null {
   const value = Number(cleaned);
   return Number.isFinite(value) ? value : null;
 }
-
-export function pluralize(count: number, singular: string, plural?: string): string {
-  return count === 1 ? singular : (plural ?? `${singular}s`);
-}

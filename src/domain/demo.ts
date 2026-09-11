@@ -178,7 +178,6 @@ export function createDemoData(now: Date = new Date(), seed = DEMO_SEED): AppDat
         odds,
         closingOdds: random() < 0.85 ? closingOdds : undefined,
         status: 'pending',
-        startsAt: placedAt.toISOString(),
       });
     }
 
