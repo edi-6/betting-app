@@ -100,8 +100,8 @@ eas build --profile production --platform all   # store-ready .aab / .ipa
 eas submit --platform all
 ```
 
-Bundle identifiers are set in `app.json` (`com.betledger.app` on both platforms) — change them to
-your own before submitting.
+Bundle identifiers are set in `app.json` (`com.edidagoat.betledger` on both platforms). Store
+listing copy, review notes and the content-rating answers live in [`store/LISTING.md`](./store/LISTING.md).
 
 ---
 
