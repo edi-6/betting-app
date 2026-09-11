@@ -74,9 +74,28 @@ Seven tools under the **Tools** tab:
 
 ## Getting started
 
+You need [Node.js](https://nodejs.org) (the LTS build) and git. Nothing else — no
+Xcode, no Android Studio.
+
 ```bash
-npm install
-npm start          # Expo dev server; press i / a, or scan the QR code with Expo Go
+git clone https://github.com/edi-6/betting-app.git
+cd betting-app
+git checkout claude/sports-betting-tracker-app-f5zk3f
+npm install        # a minute or two, only needed once
+npx expo start     # prints a QR code
+```
+
+Install **Expo Go** on your phone, then scan the QR code — with the Camera app on
+iPhone, or from inside Expo Go on Android. The phone and the computer must be on the
+same Wi-Fi; if yours blocks device-to-device traffic, use `npx expo start --tunnel`
+instead, which routes through Expo's servers and works from anywhere.
+
+On first launch you get an empty ledger. Tap **Load demo data** to fill it with a
+sample six-month history. Edits to the source reload on the phone as you save.
+
+Other ways to run it:
+
+```bash
 npm run ios        # iOS simulator (macOS only)
 npm run android    # Android emulator or device
 npm run web        # runs in a browser — handy for a quick look without a device
