@@ -1,0 +1,8 @@
+cache/
+output/
+preview/
+stills/
+sound/
+cams.png
+__pycache__/
+*.pyc
