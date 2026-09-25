@@ -363,6 +363,8 @@ class HUD:
             q = min(3, int(np.ceil(-t / step - 1e-9)))
             num = str(q)
             u = 1.0 - (-t - (q - 1) * step) / step
+            if q == 3:
+                u = max(u, 0.12)               # already there on the very first frame
             col, grad = WHITE, ((255, 255, 255), (200, 220, 255))
         else:
             num, u = 'GO!', t / 0.8

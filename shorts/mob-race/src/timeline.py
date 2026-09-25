@@ -1,8 +1,9 @@
 """The race that is shown, and the edit.
 
-The race is seed 111 of the search (tools: the race is deterministic and a video frame always advances a whole
-number of fixed physics steps, so slow motion and fast forward never change what happens): the Warden gets over
-the first trapdoor 0.07 s before it drops, scrapes through the third as the last one across, and wins the final.
+The race is seed 111 of a search over seeds and line-ups. It is deterministic, and a video frame always advances a
+whole number of fixed physics steps, so slow motion and fast forward never change what happens: the Warden gets
+over the first trapdoor 0.07 s after it starts to drop, scrapes through the third as the last one across, and wins
+the final.
 
 The edit is a list of speed keys in race time: the countdown plays in slow motion before GO, the quiet stretches a
 little fast, the big moments slow.

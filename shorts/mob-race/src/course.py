@@ -1,4 +1,4 @@
-"""The race course: a marble run built down the wall of a huge cave, in the plane of the wall (x to the right, z up;
+"""The race course: a marble run built down the face of a cliff, in the plane of the cliff (x to the right, z up;
 one unit is one Minecraft block). It is a list of pieces the simulation turns into collision shapes and the renderer
 turns into blocks, plus the machinery:
 

@@ -1,7 +1,8 @@
 """The camera: it frames the marbles still racing in the current round (and whoever is going into the lava), from
-straight in front and a little above, zooming to fit, looking a little ahead down the course; smoothed with a
-zero-phase filter so it glides. During the countdown it pans along the eight racers in their stalls, and it ends
-close on the winner on the podium.
+straight in front and a little above, zooming to fit, with room below them for where they are heading; smoothed
+with a zero-phase filter so it glides. It frames into the part of the picture that stays clear: below the HUD's
+header and standings, and above the bottom of the screen, where YouTube Shorts puts the title and caption.
+During the countdown it pans along the eight racers in their stalls, and it ends close on the winner on the podium.
 """
 import numpy as np
 
@@ -10,12 +11,16 @@ import course as C
 FOV = 40.0
 TAN = np.tan(np.radians(FOV / 2.0))
 ASPECT = 9.0 / 16.0
-D_MIN, D_MAX = 15.0, 32.0
+D_MIN, D_MAX = 15.0, 44.0          # at D_MAX the whole width of the course is in the picture
+WIN_TOP, WIN_BOT = 0.21, 0.88      # the clear part of the picture, as fractions of its height from the top
+WIN_H = WIN_BOT - WIN_TOP
+WIN_OFF = (WIN_TOP + WIN_BOT) / 2.0 - 0.5     # how far below the middle of the picture its centre is
+AHEAD = 1.5                        # room below the racers (blocks)
 
 
-def fit_distance(w, h, margin=2.2):
-    """Camera distance that fits a w x h box (blocks) in the 9:16 frame."""
-    need = max(h + 2 * margin, (w + 2 * margin) / ASPECT)
+def fit_distance(w, h, margin=1.5):
+    """Camera distance that fits a w x h box (blocks) in the clear part of the 9:16 frame."""
+    need = max((h + 2 * margin) / WIN_H, (w + 2 * margin) / ASPECT)
     return float(np.clip(need / 2.0 / TAN, D_MIN, D_MAX))
 
 
@@ -46,9 +51,11 @@ def raw_track(rec, course, winner):
             pen = course.pens[k]
             near = [p for p in pts if abs(p[1] - tr['hinge'][1]) < 7.0]
             if near or not pts:
-                # the round's end is in play: keep the trapdoor and the pen in the picture
+                # the round's end is in play: keep the trapdoor, the lava under it and the pen in the picture
                 pts.append((tr['hinge'][0], tr['hinge'][1]))
                 pts.append((pen['b'][0] * 0.7, pen['b'][1]))
+                x0, z0, x1, z1 = course.lava[k]
+                pts += [(x0, z1 - 0.8), (x1, z1 - 0.8)]
         if k >= n_trap:
             # the end: the winner on the podium
             w = [m for m in ms if m['name'] == winner][0]
@@ -56,9 +63,11 @@ def raw_track(rec, course, winner):
             continue
         P = np.array(pts)
         lo, hi = P.min(0), P.max(0)
+        lo[1] -= AHEAD
         d = fit_distance(hi[0] - lo[0], hi[1] - lo[1])
         cx = (lo[0] + hi[0]) / 2.0
-        cz = (lo[1] + hi[1]) / 2.0 - 1.4                     # look a little ahead (down)
+        # the box's centre goes to the centre of the clear part of the picture
+        cz = (lo[1] + hi[1]) / 2.0 + WIN_OFF * 2.0 * d * TAN
         half_w = d * TAN * ASPECT
         lim = max(0.0, C.HALF + 1.2 - half_w)
         cx = float(np.clip(cx, -lim, lim))

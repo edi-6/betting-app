@@ -101,6 +101,22 @@ def jsonable(e):
     return out
 
 
+def advance_fx(fx, st, i, story, winner):
+    """The particles for frame i: the race's events, the winner's confetti and fireworks, then a step."""
+    for e in st['events']:
+        fx.event(e, st)
+    if winner is not None and story['win'] is not None:
+        k = i - story['win']
+        if k == 0 or k in (6, 18, 30, 44):
+            w = [m for m in st['marbles'] if m['name'] == winner][0]
+            if k == 0:
+                fx.confetti(w['x'], w['z'])
+            else:
+                col = FX.CONFETTI[(k // 6) % len(FX.CONFETTI)]
+                fx.firework(w['x'] + (-3.0 if (k // 12) % 2 == 0 else 3.0), w['z'] + 5.0 + (k % 7), col)
+    fx.step(st['dt'], st)
+
+
 def render_frame(r, course, st, cam, marbles, fx, preview):
     t = st['t']
     vox_m = marbles.instances(st, t)
@@ -184,18 +200,7 @@ def main():
     t_start = time.time()
     n_out = 0
     for i, st in enumerate(rec):
-        for e in st['events']:
-            fx.event(e, st)
-        if winner is not None and story['win'] is not None:
-            k = i - story['win']
-            if k == 0:
-                w = [m for m in st['marbles'] if m['name'] == winner][0]
-                fx.confetti(w['x'], w['z'])
-            if k in (6, 18, 30, 44):
-                w = [m for m in st['marbles'] if m['name'] == winner][0]
-                col = FX.CONFETTI[(k // 6) % len(FX.CONFETTI)]
-                fx.firework(w['x'] + (-3.0 if (k // 12) % 2 == 0 else 3.0), w['z'] + 5.0 + (k % 7), col)
-        fx.step(st['dt'], st)
+        advance_fx(fx, st, i, story, winner)
         cue = {'t': st['t'], 'dt': st['dt'], 'events': [jsonable(e) for e in st['events']], 'hits': st['hits'],
                'cam': list(cams[i]['eye']), 'tgt': list(cams[i]['target']),
                'speed': [float(np.hypot(m['vx'], m['vz'])) if m['out'] is None else 0.0 for m in st['marbles']],
