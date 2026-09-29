@@ -106,7 +106,7 @@ def shots(ctx):
 
     out.append(S('x3_door', 8.0, '3d', scene=x3, late=lambda img, t, T, c, f: ui.keystrokes(img, keys2(t + 9.0)),
                  hud=HOTBAR,
-                 cues=[(t_door, 'door_open'), (2.6, 'amb_fade', {'to': 'room', 'dur': 2.0})] +
+                 cues=[(t_door, 'door_open', {'reverse': 1}), (2.6, 'amb_fade', {'to': 'room', 'dur': 2.0})] +
                  [(2.6 + 0.6 * k, 'step', {'surface': 'wood', 'gain': 0.7}) for k in range(7)]))
 
     # --- x4: the room: his real room. At the desk, in his chair, another him, watching -------------------------------------------------
@@ -131,7 +131,8 @@ def shots(ctx):
 
     out.append(S('x4_room', 9.0, '3d', scene=x4, hud=HOTBAR, feedback=True,
                  cues=[(0.0, 'silence_all', {'dur': 1.5}), (1.5, 'pc_hum_start'), (4.0, 'drone', {'level': 0.3,
-                                                                                                'dur': 5.0})]))
+                                                                                                'dur': 5.0}),
+                       (1.5, 'lullaby_rev', {'dur': 26.0})]))
 
     # --- x5: over its shoulder to the screen: the video player, this video, this second --------------------------------------------------
     eye5 = A.Keys([(0, (1.75, -29.4, 2.0)), (8.0, (1.45, -27.3, 1.85))], 'smooth')      # past its right shoulder

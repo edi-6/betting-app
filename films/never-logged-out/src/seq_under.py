@@ -183,7 +183,8 @@ def shots(ctx):
                     props=C.world_props(ctx, 'village', ceiling='gone'))
 
     out.append(S('u6b_streets', 6.0, '3d', scene=u6b,
-                 subs=[(1.0, 4.4, "It's the same house. Over and over.")]))
+                 subs=[(1.0, 4.4, "It's the same house. Over and over.")],
+                 cues=[(4.8, 'hurt_far', {'pan': -0.6, 'dist': 40})]))
 
     # --- u7: the date signs (close, one after another) ---------------------------------------------------------------------
     # (date, sign, duration, line, (distance, sideways, eye height) at the start and at the end)

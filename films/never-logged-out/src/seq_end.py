@@ -58,7 +58,7 @@ def shots(ctx):
                        (t_click + 0.15, 'click'), (t_open, 'window_open'), (12.0, 'toast'), (15.0, 'toast')]))
 
     # --- black. Four seconds. PLAYER 2 IS ONLINE ------------------------------------------------------------------------------------
-    out.append(S('e2_black', 4.0, 'black', cues=[(0.0, 'silence_all', {'dur': 4.0})]))
+    out.append(S('e2_black', 4.0, 'black', cues=[(0.0, 'silence')]))
 
     def online(img, t, T, c, f):
         img[:] = 0

@@ -159,7 +159,8 @@ def shots(ctx):
     out.append(S('s6_chamber', 10.0, '3d', scene=s6, hud=HOTBAR_PT,
                  fx=lambda t: {'fade': float(np.clip(t / 0.8, 0, 1))},
                  subs=[(5.0, 7.4, "There's someone else here.")],
-                 cues=[(0.8, 'step', {'surface': 'deepslate'}), (0.0, 'silence_all', {'dur': 2.0})]))
+                 cues=[(0.8, 'step', {'surface': 'deepslate'}), (0.0, 'silence_all', {'dur': 2.0}),
+                       (8.4, 'hurt_far', {'pan': 0.7, 'dist': 60})]))
 
     # --- s7: he walks up to it. It doesn't move. <NOAH_404> don't look at him ------------------------------------------------------
     stop = np.array([fig[0], fig[1] + 2.5, zc])
