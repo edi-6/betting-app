@@ -23,8 +23,8 @@ CORNER = np.array([17.9, 10.1, 0.0])          # where he stands in the map house
 def crowd(T, t_scene=0.0):
     """The plaza: named villagers going about (small loops), for the name-tag scenes."""
     specs = [('Tom', 'villager_farmer', (-0.5, -4.0), 1.6, 0.0), ('Mira', 'villager_librarian', (9.0, -2.5), 1.2, 1.1),
-             ('Elias', 'villager_cartographer', (10.5, 3.0), 0.0, 2.2), ('Rosa', 'villager_cleric', (-2.5, 4.5), 1.0, 3.3),
-             ('Finn', 'villager_smith', (7.5, 6.5), 1.4, 4.4), ('June', 'villager_shepherd', (0.5, 9.0), 0.0, 5.5)]
+             ('Elias', 'villager_cartographer', (12.5, -1.5), 0.0, 2.2), ('Rosa', 'villager_cleric', (-2.5, 4.5), 1.0, 3.3),
+             ('Finn', 'villager_smith', (-3.5, -1.5), 1.4, 4.4), ('June', 'villager_shepherd', (0.5, 9.0), 0.0, 5.5)]
     out = []
     for (name, skin, (x, y), r, ph) in specs:
         a = EN.Actor('villager', skin)

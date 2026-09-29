@@ -3,7 +3,7 @@ import gfx
 from gfx import sun_dir
 
 SUN_AZ, SUN_EL = 172.0, 5.5           # low in the west, slightly north: behind the village seen from spawn
-MOON_AZ, MOON_EL = 150.0, 34.0
+MOON_AZ, MOON_EL = 180.0, 6.0             # low in the west: through the west windows onto the east wall
 
 
 def get(name, **kw):
@@ -27,14 +27,14 @@ PRESETS = {
     'night': dict(sky='night', light_dir=sun_dir(MOON_AZ, MOON_EL), light_col=(0.16, 0.20, 0.32),
                   sky_amb=(0.022, 0.030, 0.055), gnd_amb=(0.008, 0.010, 0.016), blk_col=(1.6, 1.08, 0.62),
                   moon_dir=sun_dir(MOON_AZ, MOON_EL), moon_bright=2.2, moon_size=0.03, stars=1.0,
-                  aerial=0.005, aerial_col=(0.008, 0.010, 0.018), fog=(0.014, 10.0, 0.0, 70.0),
-                  fog_sun=(0.35, 0.35, 0.4), fog_amb=(0.006, 0.008, 0.014), exposure=1.05, sat=0.7, contrast=1.08,
+                  aerial=0.005, aerial_col=(0.008, 0.010, 0.018), fog=(0.010, 10.0, 0.0, 70.0),
+                  fog_sun=(0.12, 0.13, 0.16), fog_amb=(0.006, 0.008, 0.014), exposure=1.05, sat=0.7, contrast=1.08,
                   lift=(0.004, 0.006, 0.014), gain=(0.96, 1.0, 1.06), wind=0.35, bloom=0.4, bloom_thresh=1.4),
     'interior_night': dict(sky='night', light_dir=sun_dir(MOON_AZ, MOON_EL), light_col=(0.20, 0.25, 0.40),
                            sky_amb=(0.02, 0.028, 0.05), gnd_amb=(0.006, 0.008, 0.012), blk_col=(1.5, 1.0, 0.58),
                            moon_dir=sun_dir(MOON_AZ, MOON_EL), moon_bright=2.2, stars=1.0, aerial=0.0,
-                           fog=(0.02, 6.0, 0.0, 30.0), fog_sun=(0.5, 0.5, 0.6), fog_amb=(0.004, 0.005, 0.008),
-                           exposure=1.1, sat=0.8, contrast=1.08, wind=0.3, bloom=0.4, bloom_thresh=1.4),
+                           fog=(0.012, 6.0, 0.0, 30.0), fog_sun=(0.35, 0.35, 0.45), fog_amb=(0.004, 0.005, 0.008),
+                           exposure=1.35, sat=0.8, contrast=1.08, wind=0.3, bloom=0.4, bloom_thresh=1.4),
     'underground': dict(sky='night', light_dir=sun_dir(MOON_AZ, MOON_EL), light_col=(0.0, 0.0, 0.0),
                         sky_amb=(0.0, 0.0, 0.0), gnd_amb=(0.0, 0.0, 0.0), blk_col=(1.6, 1.1, 0.66),
                         soul_col=(0.25, 0.9, 1.1), min_amb=(0.006, 0.006, 0.008), aerial=0.0,

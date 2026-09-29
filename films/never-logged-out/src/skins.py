@@ -112,7 +112,7 @@ def player(spec, seed=1):
         for side in ('right', 'left'):
             x, y, w, h = rh[side]
             c.rect(x + 2, y + 3, 4, 4, (26, 26, 30), 0.05)
-            c.rect(x + 3, y + 4, 2, 2, (170, 34, 34), 0.05)
+            c.rect(x + 3, y + 4, 2, 2, (58, 58, 64), 0.05)
     # body (16,16) 8x12x4
     shirt = s['shirt']
     rb = c.box(16, 16, 8, 12, 4, shirt, 0.07)
@@ -132,8 +132,8 @@ def player(spec, seed=1):
         c.rect(x, y + 11, 8, 1, tuple(int(v) for v in np.array(shirt) * 0.8))
     if s.get('headphones'):
         c.rect(x + 1, y, 6, 1, (26, 26, 30))
-        c.rect(x + 1, y, 1, 2, (170, 34, 34))
-        c.rect(x + 6, y, 1, 2, (170, 34, 34))
+        c.rect(x + 1, y, 1, 2, (58, 58, 64))
+        c.rect(x + 6, y, 1, 2, (58, 58, 64))
     # arms: (40,16) right, (32,48) left; 4x12x4: sleeve to the wrist, hands of skin
     for (u, v) in ((40, 16), (32, 48)):
         ra = c.box(u, v, 4, 12, 4, shirt, 0.07)
@@ -231,9 +231,17 @@ def cow(seed=5):
     rb = c.box(*L('cow', 'body'), brown, 0.06)
     rng = np.random.default_rng(seed)
     for f, (x, y, w, h) in rb.items():
-        for _ in range(3):
-            px, py = rng.integers(x, x + max(w - 3, 1)), rng.integers(y, y + max(h - 3, 1))
-            c.rect(int(px), int(py), int(rng.integers(2, 5)), int(rng.integers(2, 5)), white, 0.03)
+        # soft round patches (a few overlapping blobs, thresholded), not rectangles
+        yy, xx = np.mgrid[0:h, 0:w] + 0.5
+        field = np.zeros((h, w))
+        for _ in range(2 if w * h > 60 else 1):
+            cx, cy = rng.uniform(0.15, 0.85) * w, rng.uniform(0.15, 0.85) * h
+            for _ in range(3):
+                bx, by = cx + rng.normal(0, 1.4), cy + rng.normal(0, 1.4)
+                sg = rng.uniform(1.1, 2.0)
+                field += np.exp(-((xx - bx) ** 2 + (yy - by) ** 2) / (2 * sg * sg))
+        for (j, i) in zip(*np.nonzero(field > 0.75)):
+            c.px(x + int(i), y + int(j), white)
     rl = c.box(*L('cow', 'leg'), brown, 0.06)
     for f in ('right', 'front', 'left', 'back'):
         x, y, w, h = rl[f]

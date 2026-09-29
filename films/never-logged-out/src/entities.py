@@ -449,14 +449,14 @@ def first_person(eye, target, skin='you', item=None, swing=0.0, bob=(0.0, 0.0), 
     s = np.sin(np.pi * np.clip(swing, 0, 1))
     if hold_map:
         # the map held low in both hands, tilted back, the arms coming in from the bottom corners
-        mc = eye + f * 0.52 - u * (0.20 + bob[1]) + r * bob[0]
-        tilt = 0.55
+        mc = eye + f * 0.42 - u * (0.09 + bob[1]) + r * bob[0]
+        tilt = 0.35
         mu = u * np.cos(tilt) + f * np.sin(tilt)            # the map's up, leaning away at the top
         mf = f * np.cos(tilt) - u * np.sin(tilt)            # its normal points back at the eye (quad faces -y)
         q = basis_quat(mf, r, mu)
-        out.append(('held_map', [*mc, *q, 0.46, 1.0, 0.46, map_layer, 1, 1, 1, 0, gfx.MAT_HAND]))
+        out.append(('held_map', [*mc, *q, 0.5, 1.0, 0.5, map_layer, 1, 1, 1, 0, gfx.MAT_HAND]))
         for side in (1, -1):
-            hand = mc + r * (0.21 * side) - mu * 0.2 - mf * 0.02
+            hand = mc + r * (0.23 * side) - mu * 0.22 - mf * 0.02
             shoulder = eye + r * (0.34 * side) - u * 0.62 + f * 0.05
             q = arm_quat(hand - shoulder, u)
             out.append(('player_arm_r' if side > 0 else 'player_arm_l',

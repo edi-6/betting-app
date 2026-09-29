@@ -13,6 +13,7 @@ import numpy as np
 import moderngl
 
 MAT_TERRAIN, MAT_LEAF, MAT_PLANT, MAT_WATER, MAT_ENTITY, MAT_HAND, MAT_GLOW, MAT_GROUND = 1, 2, 3, 4, 5, 6, 7, 8
+MAT_SHADOW = 9        # casts a shadow, never seen
 
 
 # ---------------------------------------------------------------------------------------------
@@ -226,7 +227,7 @@ layout(location=1) out vec4 o_normal;
 layout(location=2) out vec4 o_extra;
 void main(){
     vec4 t = texture(u_tex, vec3(v_uv, v_layer));
-    if (t.a < 0.5) discard;
+    if (t.a < 0.5 || int(v_mat + 0.5) == 9) discard;
     vec3 c = pow(t.rgb, vec3(2.2)) * v_tint;
     float em = v_emit;
     if (u_has_emit > 0) em += texture(u_emit, vec3(v_uv, v_layer)).r * 1.0;
@@ -249,7 +250,7 @@ SH_CUT_FS = """
 uniform sampler2DArray u_blocks;
 uniform float u_cutout;
 in vec2 v_uv; flat in float v_layer;
-void main(){ if (u_cutout > 0.5 && texture(u_blocks, vec3(v_uv, v_layer)).a < 0.5) discard; }
+void main(){ if (u_cutout > 0.5 && texture(u_blocks, vec3(v_uv, v_layer)).a < 0.9) discard; }   // glass glints don't cast
 """
 SH_PROP_VS = """
 #version 430
@@ -365,6 +366,7 @@ uniform mat4 u_lvp_near;
 uniform mat4 u_lvp_far;
 uniform float u_near_half;
 uniform float u_shadow_res;
+uniform float u_pen_mul;       // penumbra size (1 = default; smaller = crisper moon/sun shadows)
 uniform vec3 u_sun_dir;
 uniform float u_blk_flicker;
 vec3 lightvol(vec3 p){
@@ -404,7 +406,7 @@ float shadow_soft(vec3 wp, vec3 n, float ign){
     }
     if (bn < 0.5) return 1.0;
     float dist = (s.z - bsum / bn) * 400.0;
-    float pen = clamp(dist * 0.02 + 0.03, 0.03, 0.8);
+    float pen = clamp((dist * 0.02 + 0.03) * u_pen_mul, 0.008, 0.8);
     float r = max(pen / (2.0 * u_near_half), 1.2 * texel);
     float sum = 0.0;
     for (int i = 0; i < 12; i++) sum += texture(u_sh_near, vec3(s.xy + rot * POISSON[i] * r, s.z - 0.00015));
@@ -950,6 +952,7 @@ DEFAULT = dict(
     stars=0.0,
     exposure=0.8, sat=1.05, contrast=1.04, vignette=0.28, lift=(0.0, 0.0, 0.0), gain=(1.0, 1.0, 1.0),
     bloom=0.35, bloom_thresh=2.0, ssao=1.0, wind=1.0, flicker=1.0, flash=0.0,
+    shadow_pen=1.0,                     # penumbra scale of the sun/moon shadows
 )
 
 
@@ -1413,6 +1416,7 @@ class Renderer:
                 Pl['u_lvp_far'].write(m4(lvp_far))
             put('u_near_half', self.near_half)
             put('u_shadow_res', float(self.shadow_res))
+            put('u_pen_mul', float(e.get('shadow_pen', 1.0)))
             put('u_sun_dir', tuple(ldir))
             put('u_blk_flicker', float(e['flicker']))
 

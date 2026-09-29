@@ -416,7 +416,7 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
     variant: today (the original), copy_<date> in the cavern, finale (his real room inside)."""
     rng = rng or np.random.default_rng(1)
     b = Builder(w, ox, oy, 0 if variant in ('today', 'finale') else w._copy_z, r)
-    win = [(0, 3, 1, 2), (0, 7, 1, 2), (8, 3, 1, 2), (8, 7, 1, 2), (3, 10, 1, 1)]
+    win = [(0, 2, 1, 2), (0, 3, 1, 2), (0, 4, 1, 2), (0, 7, 1, 2), (8, 7, 1, 2), (3, 10, 1, 1)]
     house_shell(b, 8, 10, door=4, windows=win)
     # chimney at the back left, up through the roof
     b.fill(1, 10, 0, 1, 10, 9, 'cobblestone')
@@ -436,9 +436,9 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
     b.set(2, 9, 0, 'chest', S)
     b.set(3, 9, 0, 'lit_furnace' if variant == 'today' else 'furnace', S)
     b.set(4, 9, 0, 'furnace', S)
-    b.set(7, 4, 0, 'crafting_table', W)
+    b.set(7, 6, 0, 'crafting_table', W)
+    b.set(7, 7, 0, 'bookshelf')
     b.set(7, 5, 0, 'bookshelf')
-    b.set(7, 6, 0, 'bookshelf')
     b.set(7, 5, 1, 'bookshelf')
     b.set(1, 5, 0, 'oak_fence')                      # a little table with a lantern on it
     b.set(1, 5, 1, 'lantern') if variant != 'today' else None
@@ -455,7 +455,7 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
     if variant not in ('copy_today', 'copy_tomorrow'):
         b.frame(3, 9, 2, S, ('map', 'TODAY_SMALL'))
         b.frame(5, 9, 2, S, ('item', 'clock'))
-    b.frame(1, 3, 2, E, ('item', 'wooden_pickaxe'))
+    b.frame(1, 6, 2, E, ('item', 'wooden_pickaxe'))
     b.frame(7, 2, 2, W, ('item', 'iron_axe'))
     if variant == 'today':
         b.point('house_door', 4, -1, 0)
@@ -600,8 +600,8 @@ def map_house(w, ox, oy, r):
             k += 1
     # labels under the top row and on the lower row's frames' sides are painted on the wall above the frames
     for u, lab in ((5, 'BEFORE'), (6, 'ABANDONED'), (7, 'BURNED')):
-        b.decal(u, D_, 3, S, 'label_' + lab, (1.0, 0.28), off=-0.48)
-    b.decal(6, D_, 1, S, 'label_TODAY', (1.0, 0.28), off=-0.48)
+        b.decal(u, D_, 3, S, 'label_' + lab, (1.0, 0.28))
+    b.decal(5, D_, 0, S, 'label_TODAY', (1.0, 0.28))
     b.set(1, D_ - 1, 0, 'crafting_table')
     b.set(W_ - 1, D_ - 1, 0, 'lectern', S)
     b.set(1, 1, 0, 'bookshelf')
@@ -996,6 +996,8 @@ def build(variant='village', seed=11):
         i, j = int(np.floor(x)) - X0, int(np.floor(y)) - Y0
         if occupied[i, j]:
             return True
+        if not changed and x < HOUSE_O[0] and HOUSE_O[1] - 4 < y < HOUSE_O[1] + 12:
+            return True             # the low moon's way in through the rules house's west window (act 3)
         return np.hypot(x - SPAWN[0], y - SPAWN[1]) < 10
 
     if not changed:
