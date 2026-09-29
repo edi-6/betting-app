@@ -115,8 +115,8 @@ def desktop_overlay(img, t, T, ctx, film):
             play = d.launcher(img, acc, skin, banner=banner(), hover_play=t >= 6.6, dropdown=dropdown,
                               accounts=[('NOAH_404', False), ('PLAYER_2', True)])
             del play
-            if switched:
-                # his name is blurred (like any video would)
+            if switched and int(round(t * FM.FPS)) != 150:
+                # his name is blurred (like any video would)... except for one frame
                 x, y = 360, 150
                 reg = img[y + 50:y + 75, x + 66:x + 200]
                 img[y + 50:y + 75, x + 66:x + 200] = np.asarray(Image.fromarray(reg).filter(

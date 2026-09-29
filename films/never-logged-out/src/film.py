@@ -6,6 +6,7 @@ draws the interface, the subtitles and the film look over it and encodes the res
     python film.py compose [--preview] [--from T --to T] # frames -> output/film_noaudio.mp4
     python film.py stills OUT_DIR [--every S] [--preview] # composed stills for review
     python film.py cues                                  # the cue sheet for the sound (output/cues.json)
+    python film.py srt                                   # his lines, timed, for a voice-over (release/voiceover.srt)
 
 A shot is 3D (rendered every frame), 'still' (one 3D frame reused: the world behind a book), '2d' (drawn entirely
 by its overlay) or 'black'.
@@ -288,8 +289,8 @@ def render_shots(film, ctx, names=None, preview=False, force=False):
         print(f'[render] {s.name}: {n} frames in {time.time() - t0:.0f}s', flush=True)
 
 
-def compose_frame(film, ctx, s, t, img3d, frame):
-    import post
+def compose_layers(film, ctx, s, t, img3d):
+    """The frame with everything but his subtitle and the film look: (image, hud state)."""
     import ui
     tg = s.start + t
     img = img3d.copy() if img3d is not None else np.zeros((H, W, 3), np.uint8)
@@ -302,17 +303,34 @@ def compose_frame(film, ctx, s, t, img3d, frame):
         ui.chat(img, film.chat_log, tg, open_=False)
     if getattr(s, 'late_fn', None):
         s.late_fn(img, t, tg, ctx, film)
-    text, a = film.sub_at(tg)
+    return img, hud_state
+
+
+def add_subtitle(film, s, t, img, hud_state):
+    import ui
+    text, a = film.sub_at(s.start + t)
     if text:
         y = s.sub_y if s.sub_y is not None else (ui.H - 250 if hud_state else ui.H - 90)
         ui.subtitle(img, text, alpha=a, y=y)
-    return post.apply(img, frame, tg, s.fx(t))
+    return img
 
 
-def compose(film, ctx, out_path, preview=False, t_from=0.0, t_to=None, every=1, stills_dir=None):
+def compose_frame(film, ctx, s, t, img3d, frame, subs=True):
+    import post
+    img, hud_state = compose_layers(film, ctx, s, t, img3d)
+    if subs:
+        add_subtitle(film, s, t, img, hud_state)
+    return post.apply(img, frame, s.start + t, s.fx(t))
+
+
+def compose(film, ctx, out_path, preview=False, t_from=0.0, t_to=None, every=1, stills_dir=None, clean_path=None):
+    """Finished frames -> out_path (with his subtitles) and, if clean_path, the same film without them."""
+    import post
     d = frames_dir(preview)
     wr = None if stills_dir else Writer(out_path, crf=16 if not preview else 22, preset='medium' if not preview else
                                        'veryfast', fps=FPS / every)
+    wc = Writer(clean_path, crf=16 if not preview else 22, preset='medium' if not preview else 'veryfast',
+                fps=FPS / every) if (clean_path and not stills_dir) else None
     t_to = film.duration if t_to is None else t_to
     t0 = time.time()
     count = 0
@@ -343,7 +361,10 @@ def compose(film, ctx, out_path, preview=False, t_from=0.0, t_to=None, every=1, 
             tg = s.start + t
             if tg < t_from or tg >= t_to or frame % every:
                 continue
-            out = compose_frame(film, ctx, s, t, img3d, frame)
+            base, hud_state = compose_layers(film, ctx, s, t, img3d)
+            if wc is not None:
+                wc.write(post.apply(base.copy(), frame, tg, s.fx(t)))
+            out = post.apply(add_subtitle(film, s, t, base, hud_state), frame, tg, s.fx(t))
             if stills_dir:
                 from PIL import Image
                 Image.fromarray(out).save(os.path.join(stills_dir, f'{frame:06d}_{s.name}.jpg'), quality=88)
@@ -354,7 +375,26 @@ def compose(film, ctx, out_path, preview=False, t_from=0.0, t_to=None, every=1, 
                 print(f'  composed {count} frames ({tg:.1f}s)  {(time.time() - t0) / count:.3f}s/frame', flush=True)
     if wr:
         wr.close()
+    if wc:
+        wc.close()
     print(f'[compose] {count} frames in {time.time() - t0:.0f}s', flush=True)
+
+
+def srt_time(t):
+    ms = int(round(t * 1000))
+    h, ms = divmod(ms, 3600000)
+    m, ms = divmod(ms, 60000)
+    s, ms = divmod(ms, 1000)
+    return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
+
+
+def write_srt(film, path):
+    """His lines as subtitles (the same timing as the burned-in ones), for recording a voice over the film."""
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(path, 'w') as fh:
+        for k, (a, b, text) in enumerate(sorted(film.subs), 1):
+            fh.write(f'{k}\n{srt_time(a)} --> {srt_time(b)}\n{text}\n\n')
+    print('[srt]', path, len(film.subs), 'lines')
 
 
 def load_film(ctx):
@@ -405,6 +445,9 @@ def main():
                        'chat': film.chat_log}, fh, indent=1, default=float)
         print(len(film.cues), 'cues')
         return
+    if a.cmd == 'srt':
+        write_srt(film, os.path.join(ROOT, 'release', 'voiceover.srt'))
+        return
     names = set(x for x in a.shots.split(',') if x)
     if a.cmd == 'probe':
         # composed stills of chosen shots at chosen fractions of their length: --shots a,b --every 0.25
@@ -431,8 +474,9 @@ def main():
     if a.cmd == 'render':
         render_shots(film, ctx, names or None, a.preview, a.force)
     elif a.cmd == 'compose':
-        out = os.path.join(ROOT, 'preview' if a.preview else 'output', 'film_noaudio.mp4')
-        compose(film, ctx, out, a.preview, a.t_from, a.t_to)
+        base = os.path.join(ROOT, 'preview' if a.preview else 'output')
+        compose(film, ctx, os.path.join(base, 'film_noaudio.mp4'), a.preview, a.t_from, a.t_to,
+                clean_path=None if a.preview else os.path.join(base, 'film_clean_noaudio.mp4'))
     elif a.cmd == 'stills':
         os.makedirs(a.arg, exist_ok=True)
         every = max(1, int(round((a.every or 1.0) * FPS)))

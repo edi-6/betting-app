@@ -83,8 +83,8 @@ def shots(ctx):
     # --- p3: low through the wheat, the farmer walking, the sun behind --------------------------------------------
     farmer_path = A.Path([(-29.5, -7.4, 0.0), (-34.0, -7.2, 0.0), (-39.5, -7.6, 0.0)])
     farmer = A.Walker(farmer_path, [(0, 0.0), (6.0, 7.5)])
-    eye3 = A.Keys([(0, (-26.6, -13.8, 0.85)), (6, (-26.9, -12.6, 0.95))])
-    tgt3 = A.Keys([(0, (-42.0, -9.5, 1.2)), (6, (-42.0, -8.5, 1.35))])
+    eye3 = A.Keys([(0, (-26.6, -13.8, 1.22)), (6, (-26.9, -12.6, 1.3))])        # just over the ears of wheat
+    tgt3 = A.Keys([(0, (-42.0, -9.5, 0.95)), (6, (-42.0, -8.5, 1.05))])
 
     def p3(t, T):
         cam = dict(eye=eye3(t), target=tgt3(t), fov=50)
@@ -92,7 +92,7 @@ def shots(ctx):
         farmer.pose(f, t)
         acts = life(ctx, T, skip=('Tom',)) + [f]
         return dict(world='village', env=C.env('sunset'), cam=cam, actors=acts, props=C.world_props(ctx, 'village'),
-                    dof=dict(focus=float(np.linalg.norm(np.array(farmer.pos(t)) - np.array(eye3(t)))), k=5.0, maxr=6))
+                    dof=dict(focus=float(np.linalg.norm(np.array(farmer.pos(t)) - np.array(eye3(t)))), k=2.5, maxr=4))
 
     out.append(S('p3_wheat', 6.0, '3d', scene=p3, cues=[(2.0, 'villager', {'pan': -0.2, 'dist': 8})]))
 
