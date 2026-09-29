@@ -38,8 +38,9 @@ def ffmpeg_exe():
 # ---------------------------------------------------------------------------------------------
 class Shot:
     def __init__(self, name, dur, kind='3d', scene=None, overlay=None, fx=None, cues=(), subs=(), still=0.0,
-                 hud=None, chat=False, world=None, tags=(), late=None, sub_y=None):
+                 hud=None, chat=False, world=None, tags=(), late=None, sub_y=None, feedback=False):
         self.late_fn = late
+        self.feedback = feedback     # compose each frame as soon as it is rendered (for screens showing the video)
         self.sub_y = sub_y          # drawn after the HUD and chat (GUIs that cover them)
         self.name = name
         self.dur = float(dur)
@@ -152,6 +153,7 @@ class Ctx:
         SCR.register(self.r)
         self.item_names = self.r._item_names
         self.last3d = None               # the previous main 3D frame (what the in-game monitors can show)
+        self.last_composed = None        # the previous finished frame of a feedback shot (the video itself)
 
     def points(self, variant='village'):
         return self.worlds[variant].points
@@ -276,6 +278,8 @@ def render_shots(film, ctx, names=None, preview=False, force=False):
             t = k / FPS if s.kind == '3d' else s.still
             sc = s.scene(t)
             img = render_scene(ctx, sc, s.f0 + k)
+            if s.feedback:
+                ctx.last_composed = compose_frame(film, ctx, s, t, img, s.f0 + k)
             wr.write(img)
             if k % 48 == 47:
                 el = time.time() - t0
@@ -420,6 +424,7 @@ def main():
                         ctx._gl(tuple(ctx.worlds))
                     img3d = render_scene(ctx, s.scene(t if s.kind == '3d' else s.still), s.f0)
                 out = compose_frame(film, ctx, s, t, img3d, s.f0 + int(t * FPS))
+                ctx.last_composed = out
                 Image.fromarray(out).save(os.path.join(a.arg, f'{s.name}_{t:05.2f}.jpg'), quality=88)
                 print('[probe]', s.name, f'{t:.2f}', flush=True)
         return

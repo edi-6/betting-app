@@ -838,10 +838,10 @@ class Desktop:
                 pil_text(img, v, x + cx + (30 if c == 'Name' else 0), yy, self.f, fill=(20, 20, 20, 255),
                          anchor='lm')
 
-    def notification(self, img, title, text, slide=1.0):
+    def notification(self, img, title, text, slide=1.0, stack=0):
         w, h = 420, 110
         x = W - (w + 16) * slide
-        y = H - 44 - h - 16
+        y = H - 44 - h - 16 - stack * (h + 12)
         rect(img, x, y, w, h, (30, 32, 38), 0.97)
         rect(img, x, y, 4, h, (60, 170, 70), 1.0)
         blit(img, np.asarray(Image.fromarray(icon_grass_block()).resize((40, 40))), x + 18, y + 18)
