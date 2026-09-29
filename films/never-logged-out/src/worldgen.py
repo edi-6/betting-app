@@ -849,9 +849,11 @@ def chamber(w, rng, pit):
     zs = np.arange(k0, k1) + Z0 + 0.5
     Xg, Yg, Zg = np.meshgrid(xs, ys, zs, indexing='ij')
     zmid = (zf + zc) / 2
-    d = np.sqrt(((Xg - cx) / r) ** 2 + ((Yg - cy) / r) ** 2 + ((Zg - zmid) / ((zc - zf) / 2 + 3)) ** 2)
-    noise = 0.06 * np.sin(Xg * 0.37 + Yg * 0.21) * np.cos(Zg * 0.3 + Xg * 0.11)
-    inside = (d + noise < 1.0) & (Zg >= zf)
+    # straight rough walls up to half height, then a dome: the floor reaches the walls (the ladder lands in the open)
+    dh = np.sqrt(((Xg - cx) / r) ** 2 + ((Yg - cy) / r) ** 2)
+    noise = 0.05 * np.sin(Xg * 0.37 + Yg * 0.21) * np.cos(Zg * 0.3 + Xg * 0.11)
+    roof = zmid + (zc - zmid) * np.sqrt(np.clip(1.0 - dh ** 2, 0.0, 1.0))
+    inside = (dh + noise < 1.0) & (Zg >= zf) & (Zg < roof)
     sub = w.ids[i0:i1, j0:j1, k0:k1]
     sub[:] = np.where(inside, 0, BL.B['deepslate'])
     # a flat floor of deepslate tiles and a low round platform in the middle
@@ -869,7 +871,7 @@ def chamber(w, rng, pit):
             w.set(x, y, zf, 'soul_lantern')
     for k in range(4):
         a = k / 4 * 2 * np.pi + 0.4
-        w.set(int(round(cx + 7 * np.cos(a))), int(round(cy + 7 * np.sin(a))), zf, 'soul_lantern')
+        w.set(int(round(cx + 3.5 * np.cos(a))), int(round(cy + 3.5 * np.sin(a))), zf, 'soul_lantern')
     # the ladder: from the pit in the cavern floor straight down to the chamber floor, on a pillar
     px, py = pit
     zcav = CAVE['zf']
