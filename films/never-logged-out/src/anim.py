@@ -157,6 +157,7 @@ class POV:
         self.fov = fov
         self.bob_amt = bob
         self.eye_h = eye
+        self.eye_keys = None         # optional Keys: eye height over time (crouching)
         self.fov_keys = None
 
     def feet(self, t):
@@ -193,7 +194,7 @@ class POV:
     def cam(self, t):
         f = self.feet(t)
         amp, ph = self.bob(t)
-        eye = f + np.array([0.0, 0.0, self.eye_h])
+        eye = f + np.array([0.0, 0.0, self.eye_h if self.eye_keys is None else float(self.eye_keys(t))])
         yaw, pitch = self.angles(t)
         d = dir_from(yaw, pitch)
         right = np.array([np.cos(np.radians(yaw)), np.sin(np.radians(yaw)), 0.0])

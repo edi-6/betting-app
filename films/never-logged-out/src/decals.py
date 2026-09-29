@@ -142,7 +142,9 @@ class Decals:
             key = s.get('key') or '|'.join(s['lines'])
             if key not in self.sign_idx:
                 self.sign_idx[key] = len(sign_layers)
-                sign_layers.append(text_image(s['lines']))
+                # short texts (dates, DAY n, LEFT) in double-size letters so they read on screen
+                big = all(PF.text_mask(ln).shape[1] * 2 <= 124 for ln in s['lines']) and len(s['lines']) <= 2
+                sign_layers.append(text_image(s['lines'], font_px=2 if big else 1))
         if not sign_layers:
             sign_layers.append(text_image(['']))
         r.add_kind(self.p + 'dec_sign', mesh, sign_layers)

@@ -471,8 +471,9 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
         # the shaft under the trapdoor
         b.fill(2, 2, -6, 2, 2, -2, 'air')
         for z in range(-6, -1):
+            b.set(2, 1, z, 'stone_bricks')
             b.set(2, 3, z, 'stone_bricks')
-            b.set(2, 2, z, 'ladder', S)
+            b.set(2, 2, z, 'ladder', N)          # on the south wall: he climbs down facing it, then turns round
         b.w._house_frame = b
         for name, (u, v, z) in (('house_door_bottom', (4, 0, 0)), ('house_door_top', (4, 0, 1)),
                                 ('house_chest', (2, 9, 0)), ('house_ceiling', (4, 5, 3)),
@@ -488,7 +489,8 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
             b.set(5, 9, 0, 'red_bed', S | BL.HALF_TOP)     # a second bed
             b.set(5, 8, 0, 'red_bed', S)
             b.set(4, 9, 0, 'air')
-            b.decal(4, 10, 1, S, 'wall_sleep', (6.0, 1.5))
+            b.set(3, 10, 1, 'oak_planks')                  # no back window: the wall is painted
+            b.decal(4, 10, 1, S, 'wall_sleep', (5.0, 1.4))
             b.set(1, 5, 1, 'air')
             b.point('copy_today_door', 4, -1, 0)
             b.point('copy_today_in', 4, 2, 0)
@@ -738,8 +740,8 @@ def stair_tunnel(w, x, y_start, z_start, z_end):
         w.fill(x, y, z, x, y, z + 2, 'air')
         w.set(x, y, z - 1, 'cobblestone')
         w.set(x, y, z, 'cobblestone_stairs', N)
-        if k % 5 == 2:
-            w.set(x - 1, y, z + 1, 'torch', BL.WALL | 1)      # on the -x wall
+        if k % 5 == 0:
+            w.set(x - 1, y, z + 1, 'torch', BL.WALL | 1)      # on the -x wall (the first one at the ladder's foot)
         k += 1
         y += 1
         z -= 1

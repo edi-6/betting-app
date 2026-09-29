@@ -474,6 +474,7 @@ def first_person(eye, target, skin='you', item=None, swing=0.0, bob=(0.0, 0.0), 
     else:
         # the item held in the hand (the arm itself is hidden when holding something, like the game)
         names = item_names or []
+        base_q = basis_quat(f, r, u)                         # the item's plane faces the camera, then tilted
         hand = eye + f * (0.62 + 0.15 * s) + r * (0.38 + bob[0]) - u * (0.40 + bob[1] - 0.1 * s)
         qi = qmul(base_q, qmul(qz(-0.5 - 0.4 * s), qmul(qx(0.2 + 0.5 * s), qy(0.25))))
         k = names.index(item) if item in names else 0

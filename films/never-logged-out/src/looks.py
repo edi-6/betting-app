@@ -38,7 +38,7 @@ PRESETS = {
     'underground': dict(sky='night', light_dir=sun_dir(MOON_AZ, MOON_EL), light_col=(0.0, 0.0, 0.0),
                         sky_amb=(0.0, 0.0, 0.0), gnd_amb=(0.0, 0.0, 0.0), blk_col=(1.6, 1.1, 0.66),
                         soul_col=(0.25, 0.9, 1.1), min_amb=(0.006, 0.006, 0.008), aerial=0.0,
-                        fog=(0.018, 60.0, -40.0, 60.0), fog_amb=(0.0, 0.0, 0.0), exposure=1.55, sat=0.85,
+                        fog=(0.018, 60.0, -40.0, 60.0), fog_amb=(0.0, 0.0, 0.0), exposure=1.15, sat=0.9,
                         contrast=1.08, lift=(0.004, 0.004, 0.006), wind=0.0, bloom=0.45, bloom_thresh=1.2),
     'chamber': dict(sky='night', light_dir=sun_dir(MOON_AZ, MOON_EL), light_col=(0.0, 0.0, 0.0),
                     sky_amb=(0.0, 0.0, 0.0), gnd_amb=(0.0, 0.0, 0.0), blk_col=(1.5, 1.0, 0.6),
