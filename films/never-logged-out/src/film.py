@@ -148,7 +148,10 @@ class Ctx:
             SC.register_world(self.r, v, self.worlds[v], cache_name=v + '_v1')
             self.dec[v] = DC.Decals(self.r, self.worlds[v], maps=self.maps, prefix=v + ':')
         EN.register(self.r)
+        import screen as SCR
+        SCR.register(self.r)
         self.item_names = self.r._item_names
+        self.last3d = None               # the previous main 3D frame (what the in-game monitors can show)
 
     def points(self, variant='village'):
         return self.worlds[variant].points
@@ -167,7 +170,7 @@ def build_instances(ctx, sc):
     return inst
 
 
-def render_scene(ctx, sc, frame_no=0):
+def render_scene(ctx, sc, frame_no=0, main=True):
     import looks
     r = ctx.r
     r.use_world(sc.get('world', 'village'))
@@ -183,6 +186,8 @@ def render_scene(ctx, sc, frame_no=0):
     if ctx.preview:
         from PIL import Image
         img = np.asarray(Image.fromarray(img).resize((W, H), Image.BILINEAR))
+    if main:
+        ctx.last3d = img
     return img
 
 

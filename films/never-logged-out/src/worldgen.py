@@ -163,7 +163,7 @@ def heightmap(w, seed=5, crater=None):
         cx, cy, r, depth = crater
         dc = np.hypot(X - cx, Y - cy)
         bowl = dc < r
-        prof = -depth * np.sqrt(np.clip(1 - (dc / r) ** 2, 0, 1)) ** 0.9
+        prof = -depth * np.clip(1 - (dc / r) ** 2, 0, 1) ** 0.8      # a bowl with sloping sides, a flattish floor
         H[bowl] = np.minimum(H[bowl], np.floor(prof[bowl]).astype(np.int32))
     return H, lake
 
@@ -552,7 +552,7 @@ def real_room_interior(b, u0, v0, u1, v1, h):
     b.set(u1, v0 + 1, 0, 'blue_bed', S)
     b.set(u0, v1, 0, 'bookshelf')
     b.set(u0, v1, 1, 'lantern')
-    b.decal(uc, v1 + 1, 1, S, 'poster_space', (1.0, 1.3))
+    b.decal(uc + 2, v1 + 1, 1, S, 'poster_space', (1.0, 1.3))           # beside the monitor, not behind it
     b.decal(u0 - 1, v0 + 2, 1, E, 'poster_band', (1.0, 1.3))
     b.point('room_desk', uc, v1, 0)
     b.point('room_chair', uc, v1 - 1, 0)
@@ -908,6 +908,10 @@ def real_house(w, ox, oy, oz, r=0):
     b.fill(W_, 4, 1, W_, 5, 2, 'glass_pane')
     b.set(3, -1, 2, 'lantern', BL.WALL) if False else None
     real_room_interior(b, 1, 1, W_ - 1, D_ - 1, 4)
+    for (u, v) in ((-2, -2), (W_ + 2, -2), (-2, D_ + 2), (W_ + 2, D_ + 2)):     # lamps round it, at the bottom
+        b.fill(u, v, -1, u, v, -1, 'smooth_stone')
+        b.fill(u, v, 0, u, v, 2, 'oak_fence')
+        b.set(u, v, 3, 'lantern')
     b.point('real_door', 5, -1, 0)
     b.dyn('real_door_bottom', 5, 0, 0)
     b.dyn('real_door_top', 5, 0, 1)
@@ -932,7 +936,7 @@ def village_layout(changed=False):
                 ('farm', -40, -18, 12, 9), ('farm', -40, 0, 12, 9), ('farm', 32, -40, 10, 8),
                 ('pen', 18, -46, 11, 9)]
     # the changed world: the same pieces, moved and turned
-    return [('small', HOUSE_O[0] + 9, HOUSE_O[1] + 6, 2, 0), ('well', -12, 8, 0, 0), ('map', -24, -8, 1, 0),
+    return [('small', 26, -18, 2, 0), ('well', -12, 8, 0, 0), ('map', -24, -8, 1, 0),
             ('small', 18, -4, 2, 0), ('small', -6, 16, 3, 1), ('small', 24, 20, 1, 2),
             ('small', -24, -26, 0, 3), ('small', 6, 30, 2, 1), ('rules', 10, -12, 1, 0),
             ('library', 30, -26, 3, 0), ('smithy', -30, 26, 0, 0), ('tower', -2, -6, 0, 0),
@@ -944,7 +948,7 @@ def build(variant='village', seed=11):
     w = new_world()
     w._copy_z = CAVE['zf']
     changed = variant == 'changed'
-    crater = (SPAWN[0], SPAWN[1] + 6.0, 34.0, 36.0) if changed else None
+    crater = (SPAWN[0], SPAWN[1] + 6.0, 34.0, 24.0) if changed else None
     H, lake = heightmap(w, crater=crater)
     fill_terrain(w, H, lake)
     lay = village_layout(changed)
@@ -1012,14 +1016,16 @@ def build(variant='village', seed=11):
         scatter_plants(w, H, rng, 0.05, flowers=False)
     # the signs of the changed world: LEFT, LEFT, LEFT, then the wrong way
     if changed:
-        route = [((-11, -34), 'LEFT'), ((-16, -18), 'LEFT'), ((-6, -44), 'LEFT'),
-                 ((2, -46), "YOU'RE GOING THE WRONG WAY")]
-        for k, ((x, y), text) in enumerate(route):
-            w.fill(x, y, 0, x, y, 0, 'oak_fence')
+        # three lefts round the village (back where he started), then the wrong way, looking west at the moon
+        route = [((-13, -4), 'LEFT', S), ((14, 3), 'LEFT', W), ((-6, 25), 'LEFT', N),
+                 ((-10, -26), "YOU'RE GOING THE WRONG WAY", N)]
+        for k, ((x, y), text, f) in enumerate(route):
+            z = int(H[x - w.origin[0], y - w.origin[1]])
+            w.fill(x, y, z, x, y, z, 'oak_fence')
             lines = [text] if len(text) < 12 else ["YOU'RE GOING", 'THE WRONG', 'WAY']
-            w.set(x, y, 1, 'oak_sign', S)
-            w.signs.append(dict(pos=(x, y, 1), facing=S, wall=False, lines=lines, key=f'route_{k}'))
-            w.points[f'route_{k}'] = np.array([x + 0.5, y + 0.5, 0.0])
+            w.set(x, y, z + 1, 'oak_sign', f)
+            w.signs.append(dict(pos=(x, y, z + 1), facing=f, wall=False, lines=lines, key=f'route_{k}', glow=True))
+            w.points[f'route_{k}'] = np.array([x + 0.5, y + 0.5, float(z)])
         cx, cy, cr, cd = crater
         real_house(w, int(cx) - 5, int(cy) - 4, -int(cd) + 1)
         w.points['crater'] = np.array([cx, cy, 0.0])

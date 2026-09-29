@@ -144,7 +144,8 @@ class Decals:
                 self.sign_idx[key] = len(sign_layers)
                 # short texts (dates, DAY n, LEFT) in double-size letters so they read on screen
                 big = all(PF.text_mask(ln).shape[1] * 2 <= 124 for ln in s['lines']) and len(s['lines']) <= 2
-                sign_layers.append(text_image(s['lines'], font_px=2 if big else 1))
+                col = (236, 228, 196) if s.get('glow') else (16, 12, 8)          # glow ink: pale, lit text
+                sign_layers.append(text_image(s['lines'], font_px=2 if big else 1, color=col))
         if not sign_layers:
             sign_layers.append(text_image(['']))
         r.add_kind(self.p + 'dec_sign', mesh, sign_layers)
@@ -202,7 +203,8 @@ class Decals:
                 p = self._block_point(x, y, z, f, 8, 14 - 0.08, 8)
             else:
                 p = self._block_point(x, y, z, f, 8, 7 - 0.08, 13)
-            out['dec_sign'].append((key, self._inst(p, f, (0.95, 0.475), self.sign_idx[key])))
+            out['dec_sign'].append((key, self._inst(p, f, (0.95, 0.475), self.sign_idx[key],
+                                                    emit=0.45 if s.get('glow') else 0.0)))
         for fr in self.w.frames:
             x, y, z = fr['pos']
             f = fr['facing']

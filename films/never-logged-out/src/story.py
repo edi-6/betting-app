@@ -33,6 +33,8 @@ def film(ctx=None):
     except ImportError as e:
         print('[story] (not all acts written yet:', e, ')')
     f = FM.Film(shots)
+    import screen
+    screen.TOTAL[0] = f.duration
     for (t, name, kw) in f.cues:
         if name == 'chat':
             f.chat_log.append((t, kw['text'], tuple(kw.get('color', (255, 255, 255)))))

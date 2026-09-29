@@ -32,7 +32,7 @@ PRESETS = {
                   horizon_away=(0.012, 0.016, 0.032), glow=(0.020, 0.026, 0.040), glow_pow=(6.0, 40.0, 800.0),
                   cloud_sun=(0.10, 0.12, 0.17), cloud_amb_lo=(0.006, 0.008, 0.014),
                   cloud_amb_hi=(0.014, 0.018, 0.030), coverage=0.44, sun_scale=0.25),
-    'wrong': dict(sun=sun_dir(160.0, 9.0), zenith=(0.010, 0.030, 0.022), horizon_sun=(0.16, 0.30, 0.12),
+    'wrong': dict(sun=sun_dir(262.0, 10.0), zenith=(0.010, 0.030, 0.022), horizon_sun=(0.16, 0.30, 0.12),
                   horizon_away=(0.03, 0.07, 0.05), glow=(0.30, 0.40, 0.16), glow_pow=(3.0, 16.0, 300.0),
                   cloud_sun=(0.34, 0.46, 0.22), cloud_amb_lo=(0.012, 0.030, 0.020),
                   cloud_amb_hi=(0.03, 0.06, 0.04), coverage=0.56, sun_scale=0.35),
@@ -136,7 +136,10 @@ def bake_clouds(p, width, height, tile=512, verbose=True):
 def panorama(name, width=4096, height=1024):
     """Cached panorama for a preset (float16 (H, W, 3))."""
     os.makedirs(CACHE, exist_ok=True)
-    path = os.path.join(CACHE, f'sky_{name}_{width}x{height}_v1.npy')
+    import hashlib
+    key = hashlib.md5(repr(sorted((k, np.round(np.asarray(v, float), 5).tolist()) for k, v in
+                                  PRESETS.get(name, {}).items())).encode()).hexdigest()[:8]
+    path = os.path.join(CACHE, f'sky_{name}_{width}x{height}_{key}.npy')
     if os.path.exists(path):
         return np.load(path)
     if name == 'void':

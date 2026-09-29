@@ -268,7 +268,8 @@ def pov_scene(pov, t, env_name, world='village', actors=(), props=(), fp=None, i
     if fp is None or fp:
         fpi = EN.first_person(cam['eye'], cam['target'], skin=skin, item=item, swing=swing, bob=pov.hand_bob(t),
                               hold_map=hold_map, item_names=ITEM_NAMES, map_layer=map_layer)
-    sc = dict(world=world, env=env(env_name, **(envkw or {})), cam=cam, actors=list(actors), props=list(props),
+    e = env(env_name, **(envkw or {})) if isinstance(env_name, str) else env_name
+    sc = dict(world=world, env=e, cam=cam, actors=list(actors), props=list(props),
               fp=fpi, lights=lights, exclude=exclude)
     sc.update(kw)
     if extra:
