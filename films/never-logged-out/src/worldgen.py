@@ -807,7 +807,7 @@ def cavern(w, rng):
             w.fill(xx, yy + 2, zf, xx, yy + 2, zf + 1, 'oak_fence')
             w.set(xx, yy + 2, zf + 2, 'lantern')
     # the lecterns: DAY 1..19 along the north wall, a sign on the wall above each
-    xs = np.linspace(-36, 36, 19).round().astype(int)
+    xs = np.linspace(36, -36, 19).round().astype(int)          # DAY 1 at the east end, where he comes in
     for d, xx in enumerate(xs):
         yy = y1 - 3
         w.set(xx, yy, zf, 'lectern', S)

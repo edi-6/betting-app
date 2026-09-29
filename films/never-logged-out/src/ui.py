@@ -376,8 +376,10 @@ def wrap(text, maxw):
     return lines
 
 
-def book(img, page_text, page, n_pages, alpha=1.0, torn=False, title=None, turn=0.0, dim=0.55):
-    """The book GUI over the (dimmed) world: one page of text, the page counter, the arrows."""
+def book(img, page_text, page, n_pages, alpha=1.0, torn=False, title=None, turn=0.0, dim=0.55, lectern=False,
+         signature=None):
+    """The book GUI over the (dimmed) world: one page of text, the page counter, the arrows (and on a lectern the
+    Done / Take Book buttons; signature: a line at the foot of the page)."""
     if dim > 0:
         img[:] = (img.astype(np.float32) * (1 - dim * alpha)).astype(np.uint8)
     spr = book_page_sprite()
@@ -392,7 +394,8 @@ def book(img, page_text, page, n_pages, alpha=1.0, torn=False, title=None, turn=
     blit(img, up(spr), x0, y0, alpha)
     ink = (20, 14, 10)
     cnt = f'Page {page + 1} of {n_pages}'
-    draw_mc_text(img, cnt, x0 + w - 16 * GS, y0 + 14 * GS, ink, shadow=False, align='right', alpha=alpha)
+    if not torn:                          # (the counter went with the torn-out half)
+        draw_mc_text(img, cnt, x0 + w - 16 * GS, y0 + 14 * GS, ink, shadow=False, align='right', alpha=alpha)
     y = y0 + 30 * GS
     if title:
         draw_mc_text(img, title, x0 + w // 2 + 5 * GS, y, ink, shadow=False, align='center', alpha=alpha)
@@ -402,6 +405,15 @@ def book(img, page_text, page, n_pages, alpha=1.0, torn=False, title=None, turn=
             for ln in (wrap(para, 114) if para else ['']):
                 draw_mc_text(img, ln, x0 + 20 * GS, y, ink, shadow=False, alpha=alpha)
                 y += 10 * GS
+    if signature and not torn:
+        draw_mc_text(img, signature, x0 + w - 18 * GS, y0 + h - 40 * GS, ink, shadow=False, align='right', alpha=alpha)
+    if lectern:
+        bw, bh = 98, 20
+        for k, label in enumerate(('Done', 'Take Book')):
+            bx = W // 2 + (-bw - 2 if k == 0 else 2) * GS
+            by = y0 + h + 4 * GS
+            blit(img, up(button(bw, bh)), bx, by, alpha)
+            draw_mc_text(img, label, bx + bw * GS // 2, by + 6 * GS, (224, 224, 224), align='center', alpha=alpha)
     # arrows
     for (dx, flip) in ((w - 40 * GS, False), (22 * GS, True)):
         if (not flip and page < n_pages - 1) or (flip and page > 0):
@@ -416,6 +428,46 @@ def book(img, page_text, page, n_pages, alpha=1.0, torn=False, title=None, turn=
         # a page flip: a quick bright sweep
         xx = int(x0 + w * (1 - turn))
         rect(img, xx, y0, 8 * GS, h, (255, 250, 236), 0.35 * alpha)
+
+
+def torn_page(img, text, alpha=1.0, turn=0.0, dim=0.6, side=0):
+    """A loose page torn out of a book, held up to read (side 0 / 1: front / back, the torn edge swaps sides)."""
+    if dim > 0:
+        img[:] = (img.astype(np.float32) * (1 - dim * alpha)).astype(np.uint8)
+    w, h = 120, 150
+    rng = np.random.default_rng(19)
+    p = np.zeros((h, w, 4), np.uint8)
+    paper = np.array((236, 226, 198), float)
+    p[..., :3] = np.clip(paper * (1 + 0.035 * (rng.random((h, w, 1)) - 0.5)), 0, 255)
+    p[..., 3] = 255
+    # age: a darker rim and a couple of stains
+    yy, xx = np.mgrid[0:h, 0:w]
+    rim = np.minimum.reduce([xx, yy, w - 1 - xx, h - 1 - yy]).astype(float)
+    p[..., :3] = np.clip(p[..., :3] * (0.82 + 0.18 * np.clip(rim / 10.0, 0, 1))[..., None], 0, 255)
+    for (cx, cy, r) in ((88, 118, 14), (30, 30, 9)):
+        d = np.hypot(xx - cx, yy - cy)
+        p[d < r, :3] = (p[d < r, :3] * 0.9).astype(np.uint8)
+    # the torn edge
+    for y in range(h):
+        cut = int(5 + 3 * np.sin(y * 0.9) + 2 * np.sin(y * 0.37) + rng.integers(0, 2))
+        if side == 0:
+            p[y, :cut, 3] = 0
+            p[y, cut:cut + 1, :3] = (250, 244, 226)
+        else:
+            p[y, w - cut:, 3] = 0
+            p[y, w - cut - 1:w - cut, :3] = (250, 244, 226)
+    sw, sh = w * GS, h * GS
+    x0, y0 = W // 2 - sw // 2, 120
+    blit(img, up(p), x0, y0, alpha)
+    ink = (26, 18, 12)
+    lines = wrap(text, 92)
+    y = y0 + sh // 2 - len(lines) * 5 * GS
+    for ln in lines:
+        draw_mc_text(img, ln, W // 2, y, ink, shadow=False, align='center', alpha=alpha)
+        y += 10 * GS
+    if turn > 0:
+        xx_ = int(x0 + sw * (1 - turn))
+        rect(img, xx_, y0, 8 * GS, sh, (255, 250, 236), 0.35 * alpha)
 
 
 def chest(img, contents, hover=None, alpha=1.0, title='Chest', dim=0.55, inventory=None):
