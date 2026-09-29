@@ -162,8 +162,8 @@ class Effects:
         indices of the dominoes it throws."""
         rng = self.rng
         c = np.asarray(c, float)
-        self.vfx.step(np.array([c]), 0.0, [(c, 0.75)])
-        self.lights.append([c[0], c[1], c[2] + 1.0, 30.0, 16.0, 1.0, 0.7, 0.35, t, t + 0.5])
+        self.vfx.step(np.array([c]), 0.0, [(c, 0.6)])
+        self.lights.append([c[0], c[1], c[2] + 1.0, 16.0, 14.0, 1.0, 0.7, 0.35, t, t + 0.45])
         # the crater: blocks within reach of the blast are gone
         self.crater = (c[0], c[1], 1.7)
         n = 70

@@ -594,8 +594,8 @@ def build(meta, out_path, seed=11, stems=False):
                 sfx.add(resample(make_click(rng, 0.8), 0.7), t, 0.7, 0.0)
     if t_strike is not None:
         sfx.add(make_thunder(rng, dur - t_strike + 0.5), t_strike, 1.0, -0.3)
-        sfx.add(make_swell(rng, 0.9), t_strike - 0.9, 0.35, 0.0)
-        amb.add(make_drone(rng, dur - tv['glow'] + 0.2), tv['glow'], 0.55, 0.0)
+        sfx.add(make_swell(rng, 0.9), t_strike - 0.9, 0.6, 0.0)
+        amb.add(make_drone(rng, dur - tv['glow'] + 0.2), tv['glow'], 0.95, 0.0)
 
     # ---- ambience: wind and birds on a sunny day (they fall silent at the end), the river by the bridge
     tt = np.arange(n) / SR

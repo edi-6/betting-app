@@ -158,8 +158,8 @@ def fuse(t_lit, t, length=1.5):
     a = np.clip((t - t_lit) / length, 0.0, 1.0)
     if t < t_lit:
         return 1.0, 0.0
-    # flash frequency rises from 2 to 8 Hz
-    ph = 2 * np.pi * (2.0 * (t - t_lit) + 3.0 * (t - t_lit) ** 2 / length)
-    white = 0.85 * (0.5 + 0.5 * np.sin(ph)) ** 3 * min(1.0, a * 3)
+    # flash frequency rises from 1.2 to 3 Hz (no faster: it fills a lot of the screen)
+    ph = 2 * np.pi * (1.2 * (t - t_lit) + 0.9 * (t - t_lit) ** 2 / length)
+    white = 0.58 * (0.5 + 0.5 * np.sin(ph)) ** 2 * min(1.0, a * 3)
     swell = 1.0 + 0.06 * (0.5 + 0.5 * np.sin(ph)) + 0.22 * a ** 3
     return swell, white
