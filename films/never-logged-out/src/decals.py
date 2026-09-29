@@ -130,9 +130,10 @@ WALL_TEXT = {
 class Decals:
     """Builds the decal textures for a world and hands out their instances."""
 
-    def __init__(self, r, w, maps=None):
+    def __init__(self, r, w, maps=None, prefix=''):
         self.r = r
         self.w = w
+        self.p = prefix
         mesh = quad_mesh()
         # signs
         sign_layers = []
@@ -144,16 +145,19 @@ class Decals:
                 sign_layers.append(text_image(s['lines']))
         if not sign_layers:
             sign_layers.append(text_image(['']))
-        r.add_kind('dec_sign', mesh, sign_layers)
+        r.add_kind(self.p + 'dec_sign', mesh, sign_layers)
         # maps
         mp = maps if maps is not None else MP.make_maps(w)
         self.map_names = sorted(mp)
-        r.add_kind('dec_map', mesh, [mp[k] for k in self.map_names])
+        r.add_kind(self.p + 'dec_map', mesh, [mp[k] for k in self.map_names])
         self.maps = mp
+        # the map in his hands: layer 0 is TODAY, layer 1 is redrawn per frame (with the red marks)
+        if 'held_map' not in r.kinds:
+            r.add_kind('held_map', mesh, [mp['TODAY'], mp['TODAY'].copy()])
         # items
         icons = TX.item_icons()
         self.item_names = sorted(icons)
-        r.add_kind('dec_item', mesh, [icons[k] for k in self.item_names])
+        r.add_kind(self.p + 'dec_item', mesh, [icons[k] for k in self.item_names])
         # wall pieces
         wall_layers = []
         self.wall_idx = {}
@@ -170,7 +174,7 @@ class Decals:
                 wall_layers.append(poster(k))
         if not wall_layers:
             wall_layers.append(np.zeros((512, 512, 4), np.uint8))
-        r.add_kind('dec_wall', mesh, wall_layers)
+        r.add_kind(self.p + 'dec_wall', mesh, wall_layers)
         self.static = self._build()
 
     def _inst(self, pos, facing, size, layer, emit=0.0):
@@ -186,10 +190,9 @@ class Decals:
         return np.array([x + 0.5, y + 0.5, z], float) + p
 
     def _build(self):
+        """Rows per kind, each tagged (sign key, 'frame:<name>@x,y,z', decal key) so shots can leave some out."""
         out = {'dec_sign': [], 'dec_map': [], 'dec_item': [], 'dec_wall': []}
         for s in self.w.signs:
-            if s.get('hidden'):
-                continue
             key = s.get('key') or '|'.join(s['lines'])
             x, y, z = s['pos']
             f = s['facing']
@@ -197,19 +200,34 @@ class Decals:
                 p = self._block_point(x, y, z, f, 8, 14 - 0.08, 8)
             else:
                 p = self._block_point(x, y, z, f, 8, 7 - 0.08, 13)
-            out['dec_sign'].append(self._inst(p, f, (0.95, 0.475), self.sign_idx[key]))
+            out['dec_sign'].append((key, self._inst(p, f, (0.95, 0.475), self.sign_idx[key])))
         for fr in self.w.frames:
             x, y, z = fr['pos']
             f = fr['facing']
             kind, name = fr['content']
             p = self._block_point(x, y, z, f, 8, 15 - 0.08, 8)
+            tag = f'frame:{name}@{x},{y},{z}'
             if kind == 'map':
-                out['dec_map'].append(self._inst(p, f, (0.86, 0.86), self.map_names.index(name)))
+                out['dec_map'].append((tag, self._inst(p, f, (0.86, 0.86), self.map_names.index(name))))
             else:
-                out['dec_item'].append(self._inst(p, f, (0.55, 0.55), self.item_names.index(name)))
+                out['dec_item'].append((tag, self._inst(p, f, (0.55, 0.55), self.item_names.index(name))))
         for d in self.w.decals:
-            out['dec_wall'].append(self._inst(d['pos'], d['facing'], d['size'], self.wall_idx[d['key']]))
-        return {k: np.array(v, np.float32).reshape(-1, 16) for k, v in out.items()}
+            out['dec_wall'].append((d['key'], self._inst(d['pos'], d['facing'], d['size'], self.wall_idx[d['key']])))
+        return out
 
-    def instances(self):
-        return {k: v for k, v in self.static.items() if len(v)}
+    def instances(self, exclude=()):
+        """dict kind -> rows, without the tagged rows in exclude (a tag, or a prefix ending in '*')."""
+        res = {}
+        pre = [e[:-1] for e in exclude if e.endswith('*')]
+        exact = set(e for e in exclude if not e.endswith('*'))
+        for k, rows in self.static.items():
+            keep = [row for (tag, row) in rows if tag not in exact and not any(tag.startswith(p) for p in pre)]
+            if keep:
+                res[self.p + k] = np.array(keep, np.float32).reshape(-1, 16)
+        return res
+
+    def sign_row(self, key, pos, facing, standing=True):
+        """A text decal for a moving sign (the one that falls): pos = the sign block's origin corner."""
+        x, y, z = pos
+        p = self._block_point(x, y, z, facing, 8, (7 if standing else 14) - 0.08, 13 if standing else 8)
+        return (self.p + 'dec_sign', self._inst(p, facing, (0.95, 0.475), self.sign_idx[key]))

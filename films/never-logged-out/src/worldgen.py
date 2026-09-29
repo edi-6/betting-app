@@ -114,11 +114,22 @@ class Builder:
     def point(self, name, u, v, z):
         self.w.points[name] = self.centre(u, v, z)
 
+    def dyn(self, name, u, v, z):
+        """A block that moves in the story (a door, a lid, the block that breaks): hidden from the static mesh and
+        recorded (world position, block, state) so the shots draw it as a prop."""
+        x, y = self.xy(u, v)
+        zz = self.oz + z
+        i, j, k = self.w.ix(x, y, zz)
+        self.w.dyn[name] = dict(pos=(x, y, zz), block=BL.REG[self.w.ids[i, j, k]].name,
+                                state=int(self.w.state[i, j, k]))
+        self.w.hidden[i, j, k] = True
+
 
 def new_world():
     w = VX.World(SIZE, ORIGIN)
     w.points = {}
     w.decals = []
+    w.dyn = {}
     return w
 
 
@@ -412,6 +423,12 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
     b.fill(0, 11, -1, 2, 11, -1, 'cobblestone')
     if variant == 'finale':
         real_room_interior(b, 1, 1, 7, 9, 3)
+        b.point('house_door', 4, -1, 0)
+        b.point('house_in', 4, 2, 0)
+        b.set(3, -1, 1, 'torch', BL.WALL | N)
+        b.set(5, -1, 1, 'torch', BL.WALL | N)
+        b.dyn('house_door_bottom', 4, 0, 0)
+        b.dyn('house_door_top', 4, 0, 1)
         return b
     # interior
     b.set(6, 9, 0, 'red_bed', S | BL.HALF_TOP)
@@ -457,6 +474,10 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
             b.set(2, 3, z, 'stone_bricks')
             b.set(2, 2, z, 'ladder', S)
         b.w._house_frame = b
+        for name, (u, v, z) in (('house_door_bottom', (4, 0, 0)), ('house_door_top', (4, 0, 1)),
+                                ('house_chest', (2, 9, 0)), ('house_ceiling', (4, 5, 3)),
+                                ('house_trapdoor', (2, 2, -1)), ('house_carpet', (2, 2, 0))):
+            b.dyn(name, u, v, z)
     else:
         # the copies: dated, some decayed; TODAY's has what happened tonight
         if variant == 'copy_today':
@@ -471,6 +492,8 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
             b.set(1, 5, 1, 'air')
             b.point('copy_today_door', 4, -1, 0)
             b.point('copy_today_in', 4, 2, 0)
+            b.dyn('copy_door_bottom', 4, 0, 0)
+            b.dyn('copy_door_top', 4, 0, 1)
             b.point('copy_today_bed2', 5, 8, 0)
             b.point('copy_today_wall', 4, 9, 1)
         if variant == 'copy_tomorrow':
@@ -589,6 +612,8 @@ def map_house(w, ox, oy, r):
     b.set(5, -1, 1, 'torch', BL.WALL | N)
     b.set(7, -1, 1, 'torch', BL.WALL | N)
     b.point('maphouse_door', 6, -1, 0)
+    b.dyn('maphouse_door_bottom', 6, 0, 0)
+    b.dyn('maphouse_door_top', 6, 0, 1)
     b.point('maphouse_in', 6, 1, 0)
     b.point('maphouse_wall', 6, D_ - 2, 0)
     return b
@@ -880,6 +905,8 @@ def real_house(w, ox, oy, oz, r=0):
     b.set(3, -1, 2, 'lantern', BL.WALL) if False else None
     real_room_interior(b, 1, 1, W_ - 1, D_ - 1, 4)
     b.point('real_door', 5, -1, 0)
+    b.dyn('real_door_bottom', 5, 0, 0)
+    b.dyn('real_door_top', 5, 0, 1)
     b.point('real_in', 5, 1, 0)
     return b
 
@@ -990,12 +1017,11 @@ def build(variant='village', seed=11):
         cx, cy, cr, cd = crater
         real_house(w, int(cx) - 5, int(cy) - 4, -int(cd) + 1)
         w.points['crater'] = np.array([cx, cy, 0.0])
-    # underground (the village and the finale share it)
-    if not changed:
-        hf = w._house_frame if hasattr(w, '_house_frame') else None
-        if hf is not None:
-            x, y = hf.xy(2, 2)
-            y_end, z_end = stair_tunnel(w, x, y + 1, -6, CAVE['zf'])
+    # underground (only the village: the finale never goes down)
+    if variant == 'village':
+        hf = w._house_frame
+        x, y = hf.xy(2, 2)
+        y_end, z_end = stair_tunnel(w, x, y + 1, -6, CAVE['zf'])
         pit = cavern(w, rng)
         # connect the stair to the cavern's south wall
         w.fill(x - 1, y_end, CAVE['zf'], x + 1, CAVE['y0'], CAVE['zf'] + 3, 'air')

@@ -43,6 +43,14 @@ def make_renderer(width=1920, height=1080, ss=1.0, skies=('sunset',), shadow_res
 def register_world(r, key, world, cache_name=None):
     """Mesh + light a voxel world and upload it (both cached on disk by name)."""
     t = time.time()
+    if cache_name:
+        import hashlib
+        h = hashlib.md5()
+        here = os.path.dirname(os.path.abspath(__file__))
+        for f in ('worldgen.py', 'blocks.py', 'voxel.py', 'textures.py'):
+            with open(os.path.join(here, f), 'rb') as fh:
+                h.update(fh.read())
+        cache_name = f'{cache_name}_{h.hexdigest()[:8]}'
     path = os.path.join(CACHE, f'world_{cache_name}.npz') if cache_name else None
     if path and os.path.exists(path):
         d = np.load(path, allow_pickle=True)

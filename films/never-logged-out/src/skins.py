@@ -12,6 +12,27 @@ SKIN_NAMES = ['you', 'noah', 'you_wrong', 'villager_farmer', 'villager_librarian
               'chicken', 'hand_debug']
 
 
+# model part -> (u, v, w, h, d): texture offset and box size in pixels (w along x, h up, d along y)
+LAYOUT = {
+    'player': {'head': (0, 0, 8, 8, 8), 'hat': (32, 0, 8, 8, 8), 'body': (16, 16, 8, 12, 4),
+               'jacket': (16, 32, 8, 12, 4), 'arm_r': (40, 16, 4, 12, 4), 'sleeve_r': (40, 32, 4, 12, 4),
+               'arm_l': (32, 48, 4, 12, 4), 'sleeve_l': (48, 48, 4, 12, 4), 'leg_r': (0, 16, 4, 12, 4),
+               'pants_r': (0, 32, 4, 12, 4), 'leg_l': (16, 48, 4, 12, 4), 'pants_l': (0, 48, 4, 12, 4)},
+    'villager': {'head': (0, 0, 8, 10, 8), 'nose': (32, 0, 2, 4, 2), 'body': (16, 20, 8, 12, 6),
+                 'robe': (0, 38, 8, 18, 6), 'arms': (40, 40, 8, 4, 4), 'arm_side': (40, 48, 4, 8, 4),
+                 'leg': (44, 0, 4, 12, 4)},
+    'cow': {'head': (0, 0, 8, 8, 6), 'horn': (28, 0, 1, 3, 1), 'body': (0, 16, 12, 18, 10), 'leg': (44, 16, 4, 12, 4)},
+    'sheep': {'head': (0, 0, 6, 6, 8), 'cap': (32, 0, 6, 6, 6), 'body': (0, 16, 8, 16, 6), 'leg': (28, 16, 4, 12, 4)},
+    'pig': {'head': (0, 0, 8, 8, 8), 'snout': (32, 0, 4, 3, 1), 'body': (0, 16, 10, 16, 8), 'leg': (36, 16, 4, 6, 4)},
+    'chicken': {'head': (0, 0, 4, 6, 3), 'beak': (14, 0, 4, 2, 2), 'wattle': (14, 4, 2, 2, 2), 'body': (0, 9, 6, 8, 6),
+                'wing': (24, 13, 1, 4, 6), 'leg': (26, 0, 3, 5, 3)},
+}
+
+
+def L(model, part):
+    return LAYOUT[model][part]
+
+
 def region(u, v, w, h, d):
     return {'top': (u + d, v, w, d), 'bottom': (u + d + w, v, w, d), 'right': (u, v + d, d, h),
             'front': (u + d, v + d, w, h), 'left': (u + d + w, v + d, d, h), 'back': (u + 2 * d + w, v + d, w, h)}
@@ -158,39 +179,37 @@ def you_wrong():
 def villager(robe, trim, hat=None, seed=3, apron=None):
     c = Canvas(seed)
     skin = (170, 124, 96)
-    r = c.box(0, 0, 8, 10, 8, skin, 0.05)
+    r = c.box(*L('villager', 'head'), skin, 0.05)
     fx, fy, fw, fh = r['front']
     c.rect(fx, fy + 3, 8, 1, (64, 44, 34))              # the unibrow
     for ex in (1, 5):
         c.px(fx + ex, fy + 4, (236, 236, 236))
-        c.px(fx + ex + 1, fy + 4, (30, 90, 50))
-        c.px(fx + ex, fy + 4, (236, 236, 236))
+        c.px(fx + ex + 1, fy + 4, (236, 236, 236))
     c.px(fx + 2, fy + 4, (30, 90, 50))
     c.px(fx + 5, fy + 4, (30, 90, 50))
     c.rect(fx + 2, fy + 8, 4, 1, (110, 70, 56))
     c.rect(*r['top'], (150, 108, 84), 0.06)
-    c.box(24, 0, 2, 4, 2, (160, 112, 88), 0.04)          # nose
+    c.box(*L('villager', 'nose'), (160, 112, 88), 0.04)
     if hat is not None:
         c.rect(*r['top'], hat, 0.08)
         for side in ('right', 'left', 'back'):
             x, y, w, h = r[side]
             c.rect(x, y, w, 2, hat, 0.08)
         c.rect(fx, fy, 8, 2, hat, 0.08)
-    rb = c.box(16, 20, 8, 12, 6, robe, 0.07)
+    rb = c.box(*L('villager', 'body'), robe, 0.07)
     x, y, w, h = rb['front']
     c.rect(x + 3, y, 2, 12, trim, 0.05)
     if apron is not None:
         c.rect(x, y + 3, 8, 9, apron, 0.05)
-    c.box(0, 38, 8, 18, 6, robe, 0.07)
-    rr = region(0, 38, 8, 18, 6)
+    rr = c.box(*L('villager', 'robe'), robe, 0.07)
     x, y, w, h = rr['front']
     c.rect(x + 3, y, 2, 18, trim, 0.05)
     c.rect(x, y + 16, w, 2, tuple(int(v) for v in np.array(robe) * 0.75))
-    c.box(44, 22, 8, 4, 4, robe, 0.07)
-    ra = c.box(40, 38, 4, 8, 4, robe, 0.07)
-    c.rect(*region(44, 22, 8, 4, 4)['front'][:2], 3, 4, skin)       # hands in the middle of the crossed arms
-    c.rect(region(44, 22, 8, 4, 4)['front'][0] + 5, region(44, 22, 8, 4, 4)['front'][1], 3, 4, skin)
-    c.box(0, 22, 4, 12, 4, (70, 56, 44), 0.08)
+    ra = c.box(*L('villager', 'arms'), robe, 0.07)
+    x, y, w, h = ra['front']
+    c.rect(x + 2, y, 4, 4, skin)                         # the hands, in the middle of the crossed arms
+    c.box(*L('villager', 'arm_side'), robe, 0.07)
+    c.box(*L('villager', 'leg'), (70, 56, 44), 0.08)
     return c.img
 
 
@@ -200,25 +219,22 @@ def villager(robe, trim, hat=None, seed=3, apron=None):
 def cow(seed=5):
     c = Canvas(seed)
     brown, white = (84, 58, 40), (220, 214, 204)
-    c.box(0, 0, 8, 8, 6, brown, 0.06)                     # head 8x8x6
-    r = region(0, 0, 8, 8, 6)
+    r = c.box(*L('cow', 'head'), brown, 0.06)
     fx, fy, fw, fh = r['front']
     c.rect(fx + 2, fy + 5, 4, 3, (200, 170, 160))          # muzzle
     c.px(fx + 3, fy + 6, (40, 30, 30))
     c.px(fx + 4, fy + 6, (40, 30, 30))
-    c.rect(fx + 1, fy + 2, 1, 1, (20, 20, 20))
-    c.rect(fx + 6, fy + 2, 1, 1, (20, 20, 20))
+    c.px(fx + 1, fy + 2, (20, 20, 20))
+    c.px(fx + 6, fy + 2, (20, 20, 20))
     c.rect(fx + 3, fy, 2, 3, white)
-    c.box(22, 0, 1, 3, 1, (220, 216, 200))                 # horn
-    c.box(18, 4, 12, 18, 10, brown, 0.06)                  # body 12 x 18 x 10 (drawn lying)
-    rb = region(18, 4, 12, 18, 10)
+    c.box(*L('cow', 'horn'), (220, 216, 200))
+    rb = c.box(*L('cow', 'body'), brown, 0.06)
     rng = np.random.default_rng(seed)
     for f, (x, y, w, h) in rb.items():
         for _ in range(3):
             px, py = rng.integers(x, x + max(w - 3, 1)), rng.integers(y, y + max(h - 3, 1))
             c.rect(int(px), int(py), int(rng.integers(2, 5)), int(rng.integers(2, 5)), white, 0.03)
-    c.box(0, 16, 4, 12, 4, brown, 0.06)                    # leg
-    rl = region(0, 16, 4, 12, 4)
+    rl = c.box(*L('cow', 'leg'), brown, 0.06)
     for f in ('right', 'front', 'left', 'back'):
         x, y, w, h = rl[f]
         c.rect(x, y + 10, w, 2, (50, 40, 34))
@@ -227,50 +243,47 @@ def cow(seed=5):
 
 def sheep(seed=6):
     c = Canvas(seed)
-    c.box(0, 0, 6, 6, 8, (190, 170, 150), 0.05)            # head
-    r = region(0, 0, 6, 6, 8)
+    r = c.box(*L('sheep', 'head'), (190, 170, 150), 0.05)
     fx, fy, fw, fh = r['front']
     c.px(fx + 1, fy + 2, (30, 30, 30))
     c.px(fx + 4, fy + 2, (30, 30, 30))
     c.rect(fx + 2, fy + 4, 2, 1, (140, 110, 100))
-    c.box(28, 8, 8, 16, 6, (232, 230, 224), 0.05)          # wool body
-    c.box(0, 16, 4, 12, 4, (190, 170, 150), 0.05)          # leg
-    c.box(0, 34, 6, 6, 6, (232, 230, 224), 0.05)           # wool cap on the head
+    c.box(*L('sheep', 'body'), (232, 230, 224), 0.05)
+    c.box(*L('sheep', 'leg'), (190, 170, 150), 0.05)
+    c.box(*L('sheep', 'cap'), (232, 230, 224), 0.05)
     return c.img
 
 
 def pig(seed=7):
     c = Canvas(seed)
     pink = (236, 160, 158)
-    c.box(0, 0, 8, 8, 8, pink, 0.04)
-    r = region(0, 0, 8, 8, 8)
+    r = c.box(*L('pig', 'head'), pink, 0.04)
     fx, fy, fw, fh = r['front']
     c.px(fx + 1, fy + 3, (250, 250, 250))
     c.px(fx + 2, fy + 3, (30, 30, 30))
     c.px(fx + 5, fy + 3, (30, 30, 30))
     c.px(fx + 6, fy + 3, (250, 250, 250))
-    c.box(16, 16, 4, 3, 1, (220, 130, 130))                 # snout
-    x, y, w, h = region(16, 16, 4, 3, 1)['front']
+    rs = c.box(*L('pig', 'snout'), (220, 130, 130))
+    x, y, w, h = rs['front']
     c.px(x + 1, y + 1, (120, 60, 60))
     c.px(x + 2, y + 1, (120, 60, 60))
-    c.box(28, 8, 10, 16, 8, pink, 0.05)
-    c.box(0, 16, 4, 6, 4, pink, 0.05)
+    c.box(*L('pig', 'body'), pink, 0.05)
+    c.box(*L('pig', 'leg'), pink, 0.05)
     return c.img
 
 
 def chicken(seed=8):
     c = Canvas(seed)
     white = (236, 236, 232)
-    c.box(0, 0, 4, 6, 3, white, 0.03)                       # head
-    r = region(0, 0, 4, 6, 3)
+    r = c.box(*L('chicken', 'head'), white, 0.03)
     fx, fy, fw, fh = r['front']
     c.px(fx, fy + 1, (20, 20, 20))
     c.px(fx + 3, fy + 1, (20, 20, 20))
-    c.box(14, 0, 4, 2, 2, (240, 180, 40))                   # beak
-    c.box(14, 4, 2, 2, 2, (200, 30, 30))                    # wattle
-    c.box(0, 9, 6, 8, 6, white, 0.03)                       # body
-    c.box(24, 13, 1, 4, 6, (226, 226, 222), 0.03)           # wing
-    c.box(26, 0, 3, 5, 3, (240, 180, 40))                   # leg
+    c.box(*L('chicken', 'beak'), (240, 180, 40))
+    c.box(*L('chicken', 'wattle'), (200, 30, 30))
+    c.box(*L('chicken', 'body'), white, 0.03)
+    c.box(*L('chicken', 'wing'), (226, 226, 222), 0.03)
+    c.box(*L('chicken', 'leg'), (240, 180, 40))
     return c.img
 
 

@@ -1152,6 +1152,9 @@ class Renderer:
         k = {'vbo': vbo, 'n': len(mesh)}
         if tex == 'blocks':
             k['tex'] = None
+        elif isinstance(tex, str):
+            k['tex'] = self.kinds[tex]['tex']                  # share another kind's texture array
+            k['size'] = self.kinds[tex].get('size')
         else:
             pl = np.stack([np.ascontiguousarray(a, np.uint8) for a in layers])
             t = ctx.texture_array((pl.shape[2], pl.shape[1], pl.shape[0]), 4, pl.tobytes())
