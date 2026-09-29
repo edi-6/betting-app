@@ -422,7 +422,9 @@ def rules_house(w, ox, oy, r=0, variant='today', date=None, decay=0.0, rng=None,
     b.fill(1, 10, 0, 1, 10, 9, 'cobblestone')
     b.fill(0, 11, -1, 2, 11, -1, 'cobblestone')
     if variant == 'finale':
-        real_room_interior(b, 1, 1, 7, 9, 3)
+        # his real room, inset within the house's own walls (outside it is still the house with the rules)
+        real_room_interior(b, 2, 2, 6, 8, 3)
+        b.fill(4, 1, 0, 4, 1, 1, 'air')                      # the room's doorway, behind the house's door
         b.point('house_door', 4, -1, 0)
         b.point('house_in', 4, 2, 0)
         b.set(3, -1, 1, 'torch', BL.WALL | N)

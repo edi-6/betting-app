@@ -39,6 +39,60 @@ def noahs(look_at=None):
     return out
 
 
+CLIP = (-32.0, 80.0)                  # draw the crater (the default culls everything below z = -8 from above)
+
+
+def pov_in(ctx, pv, t, env='wrong', actors=(), props=None, **kw):
+    """A POV scene in the changed world."""
+    return C.pov_scene(pv, t, env, world=W_, actors=list(actors), clip_z=CLIP,
+                       props=C.world_props(ctx, W_) if props is None else props, **kw)
+
+
+class RoomKit:
+    """His real room at the bottom of the crater: the monitor on his desk, and the second camera behind him whose
+    picture the monitor shows (the previous one rendered, so it holds itself, smaller and smaller)."""
+
+    def __init__(self, ctx, env_kw=None):
+        self.ctx = ctx
+        self.P = P = ctx.worlds[W_].points
+        self.door = P['real_door']
+        self.mon = SCR.Monitor((P['room_monitor'][0], P['room_monitor'][1] + 0.38, P['room_monitor'][2]), facing=0)
+        self.env_kw = env_kw or dict(exposure=0.85)
+        self.shared = {'img': None}
+
+    def body_at(self, pv, t, skin='you'):
+        a = EN.Actor('player', skin, pv.feet(t), yaw=np.radians(pv.angles(t)[0]))
+        a.idle_t = t
+        a.head_pitch = -np.radians(pv.angles(t)[1]) * 0.7
+        return a
+
+    def scene(self, pv, t, T, door_deg=90.0, film_him=False, swing=0.0, item=None, props=(), behind=(),
+              env_kw=None, cam2=((-0.9, -1.8, 0.75), (0.35, 1.5, -0.35), 52.0)):
+        """POV in the room. film_him: render the second camera (him from behind, plus `behind`: actors only it sees)
+        and put its picture on the monitor."""
+        ctx = self.ctx
+        ek = dict(self.env_kw, **(env_kw or {}))
+        allp = C.world_props(ctx, W_, real_door=door_deg) + self.mon.props(glow=0.5) + list(props)
+        # the monitor's glow, and a little light at the back of the room (the open door, the lamps outside)
+        lights = self.mon.light() + [[self.door[0], self.door[1] + 3.0, self.door[2] + 2.6, 8.0, 0.55, 0.47, 0.38]]
+        if film_him:
+            head = pv.feet(t) + np.array([0.0, 0.0, 1.55])
+            eo, to, fv = cam2
+            c2 = dict(eye=head + np.array(eo), target=head + np.array(to), fov=fv)
+            prev = self.shared['img']
+            sc2 = dict(world=W_, env=looks.get('wrong', **ek), cam=c2, actors=[self.body_at(pv, t)] + list(behind),
+                       props=allp, lights=lights, clip_z=CLIP,
+                       prep=lambda r: r.update_kind_layer('screen', 0, SCR.Monitor.content(prev, T)))
+            self.shared['img'] = FM.render_scene(ctx, sc2, main=False)
+        img = self.shared['img']
+
+        def prep(r):
+            r.update_kind_layer('screen', 0, SCR.Monitor.content(img, T))
+        sc = pov_in(ctx, pv, t, env=looks.get('wrong', **ek), props=allp, lights=lights, swing=swing, item=item)
+        sc['prep'] = prep
+        return sc
+
+
 def shots(ctx):
     S = FM.Shot
     out = []
@@ -52,11 +106,8 @@ def shots(ctx):
         pk = [(t, (x, y, gz(x, y) if z is None else z)) for (t, (x, y, z)) in pos_keys]
         return A.POV(pos_keys=pk, **kw)
 
-    CLIP = (-32.0, 80.0)               # draw the crater (the default culls everything below z = -8 from above)
-
     def scene(pv, t, env='wrong', actors=(), props=None, **kw):
-        return C.pov_scene(pv, t, env, world=W_, actors=list(actors), clip_z=CLIP,
-                           props=C.world_props(ctx, W_) if props is None else props, **kw)
+        return pov_in(ctx, pv, t, env, actors, props, **kw)
 
     def tags(pv, look=True):
         def ov(img, t, T, ctx_, film):
@@ -196,7 +247,8 @@ def shots(ctx):
                  cues=[(ts, 'step', {'surface': 'grass'}) for ts in pov7.steps(0, 6.0)]))
 
     # --- w8: his room ----------------------------------------------------------------------------------------------------------
-    mon = SCR.Monitor((P['room_monitor'][0], P['room_monitor'][1] + 0.38, P['room_monitor'][2]), facing=0)
+    kit = RoomKit(ctx)
+    mon = kit.mon
     feet_in = np.array([door[0], door[1] + 2.4, door[2]])
     behind_chair = np.array([P['room_chair'][0] - 0.1, P['room_chair'][1] - 1.55, door[2]])
     t_door = 1.0
@@ -206,37 +258,10 @@ def shots(ctx):
                            (3.2, tuple(feet_in)), (7.0, tuple(behind_chair)), (10.0, tuple(behind_chair))],
                  yaw_keys=[(0, 0), (3.2, 30), (4.6, -40), (5.8, 10), (7.0, a_mon[0]), (10.0, a_mon[0])],
                  pitch_keys=[(0, -2), (3.2, 4), (5.8, -6), (7.0, a_mon[1]), (10.0, a_mon[1])], seed=100, jitter=0.07)
-    room_env = dict(exposure=0.85)
-    shared = {'img': None}
-
-    def body_at(pv, t):
-        a = EN.Actor('player', 'you', pv.feet(t), yaw=np.radians(pv.angles(t)[0]))
-        a.idle_t = t
-        a.head_pitch = -np.radians(pv.angles(t)[1]) * 0.7
-        return a
-
-    def room_scene(pv, t, T, env_kw, door_deg=90.0, film_him=False, swing=0.0):
-        props = C.world_props(ctx, W_, real_door=door_deg) + mon.props(glow=0.5)
-        lights = mon.light()
-        if film_him:
-            # the second camera: up in the corner behind him, looking at his back and the screen
-            head = pv.feet(t) + np.array([0.0, 0.0, 1.55])
-            cam2 = dict(eye=head + np.array([-0.9, -1.8, 0.75]), target=head + np.array([0.35, 1.5, -0.35]), fov=52)
-            sc2 = dict(world=W_, env=looks.get('wrong', **env_kw), cam=cam2, actors=[body_at(pv, t)], props=props,
-                       lights=lights, clip_z=CLIP, prep=lambda r: r.update_kind_layer('screen', 0, SCR.Monitor.content(
-                           shared['img'], T)))
-            shared['img'] = FM.render_scene(ctx, sc2, main=False)
-        img = shared['img']
-
-        def prep(r):
-            r.update_kind_layer('screen', 0, SCR.Monitor.content(img, T))
-        sc = scene(pv, t, env=looks.get('wrong', **env_kw), props=props, lights=lights, swing=swing)
-        sc['prep'] = prep
-        return sc
 
     def w8(t, T):
         swing = float(np.clip((t - t_door + 0.2) / 0.25, 0, 1)) if t < t_door + 0.05 else 0.0
-        return room_scene(pov8, t, T, room_env, door_deg=float(door8(t)), film_him=t > 6.0, swing=swing)
+        return kit.scene(pov8, t, T, door_deg=float(door8(t)), film_him=t > 6.0, swing=swing)
 
     out.append(S('w8_room', 10.0, '3d', scene=w8, hud=HOTBAR,
                  subs=[(3.4, 5.4, 'This is my room.'), (5.8, 9.4, 'My actual room. My desk. My...')],
@@ -252,8 +277,7 @@ def shots(ctx):
     pov9.fov_keys = A.Keys([(0, 70.0), (4.0, 60.0), (10.0, 56.0)])
 
     def w9(t, T):
-        sc = room_scene(pov9, t, T, room_env, film_him=True)
-        return sc
+        return kit.scene(pov9, t, T, film_him=True)
 
     out.append(S('w9_screen', 10.0, '3d', scene=w9, hud=HOTBAR,
                  subs=[(3.0, 5.0, "That's me."), (5.6, 9.6, "It's filming me. From behind me. Right now.")],
