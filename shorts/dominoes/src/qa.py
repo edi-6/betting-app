@@ -1,7 +1,8 @@
 """Automated checks on a rendered video: frame count/format, black or corrupt frames, flicker.
 
 The video is one continuous camera move, so a big brightness jump from one frame to the next is a glitch unless the
-action explains it: the blast (and the smoke and dirt in front of the lens), and the lightning at the end.
+action explains it: the creeper's fuse flashing, the blast (and the smoke and dirt in front of the lens), and the
+lightning at the end.
 
 python qa.py VIDEO.mp4 CUES.json
 """
@@ -27,7 +28,12 @@ def frames(path, w=270, h=480):
 
 def exempt_frames(meta):
     ok = set()
+    lit = None
     for i, c in enumerate(meta['frames']):
+        if 'lit' in c['events']:
+            lit = i
+        if 'blast' in c['events'] and lit is not None:
+            ok.update(range(lit, i))                  # the fuse's flashing (at most 3 a second, by design)
         if 'blast' in c['events']:
             ok.update(range(i, i + 40))
         if 'strike' in c['events']:

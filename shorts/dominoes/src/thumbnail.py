@@ -17,7 +17,7 @@ import pixelfont as PF
 import scene as SC
 
 ROW = 90                                   # the wave has just passed the nose; the eyes are next
-CAM = '-17.0,26.0,40.0,-1.0,62.0'          # eye x, y, z, target x, y
+CAM = '-24.0,10.0,56.0,0.0,57.0'           # eye x, y, z, target x, y (wide enough to show the trees)
 
 
 def main():

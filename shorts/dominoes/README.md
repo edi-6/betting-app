@@ -21,8 +21,8 @@ Every domino is simulated, and the counter counts the real dominoes going down. 
 picture keep people watching to the end, and the ending is the kind people rewatch and comment on.
 
 **Ready to upload:** [`release/dominoes.mp4`](release/dominoes.mp4), with an optional cover image in
-[`release/thumbnail.jpg`](release/thumbnail.jpg) (the field half fallen, the face up to the nose, the eyes still
-hidden; titled *WAIT FOR THE END...*), or the same without the title in
+[`release/thumbnail.jpg`](release/thumbnail.jpg) (the field half fallen with the trees of the plains behind it, the
+face up to the nose, the eyes still hidden; titled *WAIT FOR THE END...*), or the same without the title in
 [`release/thumbnail_clean.jpg`](release/thumbnail_clean.jpg).
 
 | | |
