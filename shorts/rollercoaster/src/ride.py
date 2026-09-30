@@ -5,6 +5,8 @@ Segments, in order (the video loops from the last back to the first without a se
   A  OVERWORLD  from the lift hill's crest, the drop, the canyon, into the ruined portal
   B  NETHER     out of the portal on the ledge ... the jump (in slow motion) ... into the End portal
   C  THE END    off the obsidian platform ... the dragon ... into the exit portal
+  E  DEEP DARK  out into the ancient city, round its tower, into the great portal as it wakes
+  F  THE SIFT   the new dimension: off the cliff into the Singer's Meadow ... under the fossil ... into the rift
   D  OVERWORLD  back on the lift hill, clicking up to the crest: the frame after the last is the first
 
 Everything moves in ride time (tau, per track, from the track's physics); the video time maps onto it, slower where
@@ -118,9 +120,21 @@ def crossing(tr, point, normal):
 
 class Ride:
     def __init__(self, metas=None):
-        self.tracks = {'over': paths.overworld(), 'nether': paths.nether(), 'end': paths.the_end()}
+        self.tracks = {'over': paths.overworld(), 'nether': paths.nether(), 'end': paths.the_end(),
+                       'deep': paths.deep(), 'sift': paths.sift()}
         self.metas = metas or {}
         o, n, e = self.tracks['over'], self.tracks['nether'], self.tracks['end']
+        dp, sf = self.tracks['deep'], self.tracks['sift']
+        md, ms = self.metas.get('deep', {}), self.metas.get('sift', {})
+        if 'gate' in md:
+            s_cut_e = crossing(dp, md['gate']['center'], md['gate']['normal']) + 0.8
+        else:
+            s_cut_e = dp.marks['portal'] + 1.0
+        if 'portals' in ms:
+            rift = ms['portals']['rift']
+            s_cut_f = crossing(sf, rift['center'], rift['normal']) + 0.8
+        else:
+            s_cut_f = sf.marks['rift'] + 1.3
         crest = o.time(o.marks['crest'])
         mo = self.metas.get('over', {})
         if 'portal' in mo:
@@ -135,6 +149,8 @@ class Ride:
             Segment('B', 'nether', n, n.time(0.6), n.time(s_cut_b),
                     slow=[(jump0 - 0.08, jump1 - 0.14, 0.3, 0.38, 0.14)]),
             Segment('C', 'end', e, e.time(0.6), e.time(s_cut_c)),
+            Segment('E', 'deep', dp, dp.time(0.6), dp.time(s_cut_e)),
+            Segment('F', 'sift', sf, sf.time(0.6), sf.time(s_cut_f)),
             Segment('D', 'over', o, crest - 3.4, crest),
         ]
         self.starts = np.cumsum([0.0] + [sg.duration for sg in self.segments])
@@ -173,7 +189,7 @@ def look_dist(world, tr, s):
         c = tr.marks['crest']
         w = np.clip((s - (c - 7.0)) / 7.0, 0, 1) * np.clip(1 - (s - (c + 8.0)) / 14.0, 0, 1)
         return None if w <= 0 else float(w * 24.0 + (1 - w) * np.clip(4.0 + tr.speed(s) * 0.26, 4, 14))
-    if world == 'nether':
+    if world in ('nether', 'sift'):
         c = tr.marks['drop']
         w = np.clip(1 - np.abs(s - c) / 12.0, 0, 1)
         return None if w <= 0 else float(w * 20.0 + (1 - w) * np.clip(4.0 + tr.speed(s) * 0.26, 4, 14))
@@ -186,12 +202,15 @@ def hands_up(world, tr, s):
         a, b = tr.marks['drop'] + 2.0, tr.marks['bottom'] - 6.0
     elif world == 'nether':
         a, b = tr.marks['drop'] + 2.0, tr.marks['lava'] - 8.0
+    elif world == 'sift':
+        a, b = tr.marks['drop'] + 2.0, tr.marks['meadow'] - 6.0
     else:
         return 0.0
     return float(np.clip((s - a) / 5.0, 0, 1) * np.clip((b - s) / 6.0, 0, 1))
 
 
-BED = {'over': 'spruce_planks', 'nether': 'nether_bricks', 'end': 'end_stone_bricks'}
+BED = {'over': 'spruce_planks', 'nether': 'nether_bricks', 'end': 'end_stone_bricks', 'deep': 'deepslate_bricks',
+       'sift': 'siftslate_bricks'}
 
 
 def base_scene(ride, f, extra=None):

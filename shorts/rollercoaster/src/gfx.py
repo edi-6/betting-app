@@ -150,6 +150,7 @@ uniform float u_cutout;
 uniform float u_time;
 uniform int u_water;
 uniform int u_lava;
+uniform int u_ichor;
 uniform ivec4 u_leafy;       // leaves x3, tall grass (material)
 uniform int u_grass_top;
 uniform int u_grass_side;
@@ -178,6 +179,22 @@ void main(){
         o_albedo = vec4(sqrt(clamp(c, 0.0, 1.0)), 0.0);
         o_normal = vec4(nrm * 0.5 + 0.5, %d.0 / 255.0);
         o_extra = vec4((0.30 + heat * 0.35) * u_emit_scale / 16.0, 0.0, 0.0, 1.0);
+        return;
+    }
+    if (lay == u_ichor) {
+        // ichor (the Sift): thick and slow, iridescent colours drifting through it, a soft glow and a sheen
+        vec2 q = abs(nrm.z) > 0.5 ? v_wpos.xy : vec2(dot(v_wpos.xy, vec2(0.7071, 0.7071)), v_wpos.z);
+        vec2 fl = abs(nrm.z) > 0.5 ? vec2(u_time * 0.05, -u_time * 0.035) : vec2(0.0, u_time * 0.9);
+        float n1 = texture(u_noise, (q + fl) * 0.05).r;
+        float n2 = texture(u_noise, (q * 1.9 - fl) * 0.09 + 0.61).r;
+        vec2 uvi = v_uv + vec2(n1 - 0.5, n2 - 0.5) * 0.45;
+        vec4 ti = texture(u_blocks, vec3(uvi, v_layer));
+        float h = fract(n1 * 1.3 + n2 * 0.7 + u_time * 0.05);
+        vec3 irid = 0.5 + 0.5 * cos(6.2832 * (h + vec3(0.0, 0.33, 0.67)));
+        vec3 c = pow(ti.rgb, vec3(2.2)) * mix(vec3(1.0), irid * 1.5, 0.30);
+        o_albedo = vec4(sqrt(clamp(c, 0.0, 1.0)), 0.55);
+        o_normal = vec4(nrm * 0.5 + 0.5, %d.0 / 255.0);
+        o_extra = vec4((0.12 + 0.10 * n2) * u_emit_scale / 16.0, 0.0, 0.0, 1.0);
         return;
     }
     if (lay == u_water && abs(nrm.z) < 0.5) {
@@ -225,7 +242,7 @@ void main(){
     o_normal = vec4(nrm * 0.5 + 0.5, mat / 255.0);
     o_extra = vec4(em * u_emit_scale / 16.0, 0.0, 0.0, 1.0);
 }
-""" % (MAT_TERRAIN, MAT_GLOW, MAT_TERRAIN, MAT_WATER, MAT_LEAF, MAT_PLANT, MAT_GROUND)
+""" % (MAT_TERRAIN, MAT_GLOW, MAT_TERRAIN, MAT_TERRAIN, MAT_WATER, MAT_LEAF, MAT_PLANT, MAT_GROUND)
 
 # instanced meshes (characters, block props, decals): pos3 quat4 scale3 layer1 tint3 emit1 mat1 = 16 floats
 INST_FMT = '3f 4f 3f 1f 3f 1f 1f/i'
@@ -1370,6 +1387,7 @@ class Renderer:
         P['u_leafy'] = (li['oak_leaves'], li['spruce_leaves'], li['birch_leaves'], li['tall_grass'])
         P['u_water'] = li['water']
         P['u_lava'] = li.get('lava', -1)
+        P['u_ichor'] = li.get('ichor', -1)
         P['u_grass_top'] = li['grass_top']
         P['u_grass_side'] = li['grass_side']
         P['u_emit_scale'] = 1.0

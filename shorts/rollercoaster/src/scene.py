@@ -34,7 +34,7 @@ def make_renderer(width=1920, height=1080, ss=1.0, skies=('sunset',), shadow_res
     r = gfx.Renderer(width, height, ss=ss, shadow_res=shadow_res, near_half=near_half, far_half=far_half)
     at = VX.atlas()
     li = {k: at[k] for k in ('water', 'grass_top', 'grass_side', 'oak_leaves', 'spruce_leaves', 'birch_leaves',
-                             'tall_grass', 'lava')}
+                             'tall_grass', 'lava', 'ichor')}
     r.set_blocks(at.rgba, at.emit, noise_tex(), li)
     r.set_moon(SKY.moon_texture())
     for s in skies:

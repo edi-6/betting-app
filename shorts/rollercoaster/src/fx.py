@@ -392,9 +392,10 @@ class EndStory:
             (-1.0, c + np.array([50.0, 40.0, 50.0])),
             (0.8, c + np.array([10.0, 62.0, 46.0])),
             (1.9, c + np.array([40.0, -40.0, 34.0])),
-            (t_sw - 1.2, cart(t_sw - 1.2) - Th * 42.0 + Rh * 5.0 + np.array([0, 0, 15.0])),
-            (t_sw, cart(t_sw) + Th * 2.0 + np.array([0, 0, 8.0])),
-            (t_sw + 0.9, cart(t_sw + 0.9) + Th * 26.0 - Rh * 12.0 + np.array([0, 0, 17.0])),
+            # the swoop: diving out of the sky ahead and to the left, low over the cart, and away behind
+            (t_sw - 1.2, cart(t_sw - 1.2) + Th * 70.0 - Rh * 22.0 + np.array([0, 0, 36.0])),
+            (t_sw, cart(t_sw) + Th * 3.0 + Rh * 4.0 + np.array([0, 0, 10.0])),
+            (t_sw + 0.9, cart(t_sw + 0.9) - Th * 34.0 - Rh * 10.0 + np.array([0, 0, 18.0])),
             (t_sw + 2.2, c + np.array([-30.0, 40.0, 40.0])),
             (self.t_perch - 1.3, c + Lp * 32.0 + Tp * 22.0 + np.array([0.0, 0.0, 22.0])),
             (self.t_perch, perch_body),
@@ -444,6 +445,15 @@ class EndStory:
         drows, info = self.dragon.rows(tau)
         rows += drows
         body = info['body']
+        # a wake of the End's purple particles behind the dragon (so it reads against the black pillars), and a
+        # purple glow round it
+        rng = _rng(17)
+        offs = rng.normal(0, 1, (90, 3)) * np.array([2.2, 2.2, 1.2])
+        for k in range(90):
+            age = (k / 90.0) * 0.9
+            p = np.asarray(self.path(tau - age)[0]) + offs[k] * (1.0 + 2.0 * age) + np.array([0, 0, 0.8 * age])
+            glow.append([*p, 0.16 + 0.05 * (k % 3), 1.0, 0.45, 1.0, 0.75 * (1 - k / 90.0)])
+        lights.append([*body, 16.0, 1.4, 0.5, 1.8])
         beams = []
         for k, (x, y, tz, rr, caged) in enumerate(self.pillars):
             cr, c = mobs.crystal_rows((x, y, tz), tau, k)
@@ -484,6 +494,133 @@ def end_events(sc):
     return rows, lights, parts
 
 
+# ---------------------------------------------------------------------------------------------
+# the deep dark and the Sift
+# ---------------------------------------------------------------------------------------------
+def floaters(sc, cell, radius, z_lo, z_hi, rise, col, size, alpha, seed, period=(3.0, 6.0)):
+    """Souls drifting upwards round the camera: a fixed lattice of emitters (so they stay put in the world from frame
+    to frame), each rising, swaying and fading on its own cycle."""
+    eye = sc['eye']
+    tau = sc['tau']
+    gx0, gy0 = np.floor((eye[0] - radius) / cell), np.floor((eye[1] - radius) / cell)
+    n = int(2 * radius / cell)
+    ii, jj = np.meshgrid(np.arange(n) + gx0, np.arange(n) + gy0, indexing='ij')
+    ii, jj = ii.ravel(), jj.ravel()
+    h1 = (np.sin(ii * 12.9898 + jj * 78.233 + seed) * 43758.5453) % 1.0
+    h2 = (np.sin(ii * 39.346 + jj * 11.135 + seed) * 24634.6345) % 1.0
+    h3 = (np.sin(ii * 73.156 + jj * 52.235 + seed) * 12345.6789) % 1.0
+    per = period[0] + (period[1] - period[0]) * h3
+    age = ((tau + h1 * 17.0) % per) / per
+    x = (ii + h1) * cell + 0.8 * np.sin(tau * 1.3 + h2 * 6.0)
+    y = (jj + h2) * cell + 0.8 * np.cos(tau * 1.1 + h1 * 6.0)
+    z = z_lo + (z_hi - z_lo) * h2 + rise * age
+    a = alpha * np.sin(np.pi * age) * (0.7 + 0.3 * np.sin(tau * 9.0 + h3 * 20.0))
+    s = size * (0.7 + 0.6 * h3)
+    return np.column_stack([x, y, z, s, np.full_like(x, col[0]), np.full_like(x, col[1]), np.full_like(x, col[2]),
+                            a]).astype(np.float32)
+
+
+class DeepStory:
+    """The ancient city's portal wakes as the cart comes (the note blocks' melody is in the soundtrack): its opening
+    fills with the Sift's swirl and it lights up the city round it."""
+
+    def __init__(self, tr, meta):
+        self.tr = tr
+        self.meta = meta
+        self.t_gate = tr.time(tr.marks['portal'])
+        self.t_wake = self.t_gate - 1.7
+        self.t_open = self.t_gate - 0.8
+
+    def glow(self, tau):
+        return float(np.clip((tau - self.t_wake) / (self.t_open - self.t_wake), 0, 1)) ** 1.5
+
+
+def deep_events(sc):
+    import props as PR
+    meta = RD_META.get('deep', {})
+    if 'deep' not in _STORY:
+        _STORY['deep'] = DeepStory(sc['tr'], meta)
+    st = _STORY['deep']
+    tau = sc['tau']
+    rows, lights, glow = [], [], []
+    gate = meta.get('gate')
+    g = st.glow(tau)
+    if gate is not None and g > 0.01:
+        rows += PR.nether_portal_rows(gate['center'], gate['width'], gate['height'], gate['normal'], tau,
+                                      kind='sift_portal', glow=0.55 * g)
+        c = np.asarray(gate['center'], float)
+        n = np.asarray(gate['normal'], float)
+        fl = 0.9 + 0.1 * np.sin(tau * 11.0)
+        lights.append([*(c - n * 3.0), 30.0, 0.6 * g * fl, 1.3 * g * fl, 1.4 * g * fl])
+        lights.append([*(c - n * 2.0 + np.array([0.0, 0.0, 3.0])), 20.0, 1.2 * g, 0.5 * g, 0.8 * g])
+        # souls streaming out of the opening
+        rng = _rng(int(tau * 30) + 3)
+        k = int(60 * g)
+        pos = c[None] + rng.normal(0, 1, (k, 3)) * np.array([3.5, 3.5, 3.0]) - n[None] * rng.uniform(0, 8, (k, 1))
+        for p in pos:
+            glow.append([*p, 0.18, 0.55, 1.0, 1.0, 0.8 * g])
+    parts = dict(soft=np.zeros((0, 8), np.float32),
+                 glow=np.concatenate([np.array(glow, np.float32).reshape(-1, 8),
+                                      floaters(sc, 6.0, 42.0, 14.0, 40.0, 10.0, (0.45, 0.95, 1.0), 0.13, 0.8, 1.7)]))
+    return rows, lights, parts
+
+
+class SiftStory:
+    """Blubs hopping beside the track in groups, the portals' surfaces (the one the cart came out of, the rift ahead)."""
+
+    def __init__(self, tr, meta):
+        self.tr = tr
+        self.meta = meta
+        rng = _rng(31)
+        H, org = meta.get('H'), meta.get('origin')
+        self.blubs = []
+        for s in (tr.marks['meadow'] + 6.0, tr.marks['meadow'] + 34.0, tr.marks['meadow'] + 66.0,
+                  tr.marks['lake'] - 12.0, tr.marks['fossil'] - 8.0):
+            P = tr.pos(s)
+            T, R, U = tr.frame(s)
+            rh = np.array([R[0], R[1], 0.0]) / max(np.hypot(R[0], R[1]), 1e-6)
+            th = np.array([T[0], T[1], 0.0]) / max(np.hypot(T[0], T[1]), 1e-6)
+            side = 1.0 if rng.random() < 0.5 else -1.0
+            for k in range(4):
+                q = P + rh * side * rng.uniform(3.2, 7.5) + th * rng.uniform(-3.0, 9.0)
+                z = P[2] - 4.0
+                if H is not None:
+                    i, j = int(np.floor(q[0])) - org[0], int(np.floor(q[1])) - org[1]
+                    if 0 <= i < H.shape[0] and 0 <= j < H.shape[1]:
+                        z = float(H[i, j])
+                yaw = float(np.degrees(np.arctan2(th[0], th[1]))) + rng.uniform(-60, 60)
+                self.blubs.append((np.array([q[0], q[1], z]), yaw, rng.uniform(0, 6.3)))
+        self.t_rift = tr.time(tr.marks['rift'])
+
+
+def sift_events(sc):
+    import mobs
+    import props as PR
+    meta = RD_META.get('sift', {})
+    if 'sift' not in _STORY:
+        _STORY['sift'] = SiftStory(sc['tr'], meta)
+    st = _STORY['sift']
+    tau = sc['tau']
+    eye = sc['eye']
+    rows, lights = [], []
+    for (p, yaw, ph) in st.blubs:
+        if np.linalg.norm(p - eye) < 90.0:
+            rows += mobs.blub_rows(p, yaw, tau, ph)
+    for name, pt in meta.get('portals', {}).items():
+        if np.linalg.norm(np.asarray(pt['center']) - eye) < 160.0:
+            rows += PR.nether_portal_rows(pt['center'], pt['width'], pt['height'], pt['normal'], tau,
+                                          kind='sift_portal')
+    rift = meta.get('portals', {}).get('rift')
+    if rift is not None:
+        g = float(np.clip(1.0 - (st.t_rift - tau) / 1.5, 0, 1))
+        if g > 0:
+            c = np.asarray(rift['center'], float)
+            lights.append([*(c - np.asarray(rift['normal']) * 2.0), 26.0, 1.4 * g, 2.6 * g, 2.8 * g])
+    parts = dict(soft=np.zeros((0, 8), np.float32),
+                 glow=floaters(sc, 7.0, 50.0, eye[2] - 12.0, eye[2] + 10.0, 8.0, (0.62, 0.95, 1.0), 0.14, 0.7, 4.1))
+    return rows, lights, parts
+
+
 def attention(world, tr, tau):
     """(point, weight) the rider glances at, or None."""
     meta = RD_META.get(world, {})
@@ -492,9 +629,9 @@ def attention(world, tr, tau):
             _STORY['end'] = EndStory(tr, meta)
         st = _STORY['end']
         t_sw = st.kt[4]
-        w = float(np.clip((tau - (t_sw - 0.45)) / 0.3, 0, 1) * np.clip(((t_sw + 0.9) - tau) / 0.4, 0, 1))
+        w = float(np.clip((tau - (t_sw - 0.9)) / 0.35, 0, 1) * np.clip(((t_sw + 0.1) - tau) / 0.3, 0, 1))
         if w > 0:
-            return st.path(tau)[0], 0.42 * w * w * (3 - 2 * w)
+            return st.path(tau)[0], 0.4 * w * w * (3 - 2 * w)
         # the roar on the perch: a look up at its head, then back to the portal for the dive
         w = float(np.clip((tau - (st.t_roar - 0.5)) / 0.3, 0, 1) * np.clip(((st.t_roar + 0.3) - tau) / 0.3, 0, 1))
         if w > 0:
@@ -562,14 +699,14 @@ def _grid(h, w):
     return _GRID[(h, w)]
 
 
-def swirl(h, w, ph):
-    """The nether portal's swirl, full screen (linear 0..1 rgb)."""
+def swirl(h, w, ph, c0=(0.20, 0.02, 0.50), c1=(0.80, 0.52, 1.00)):
+    """A portal's swirl, full screen (linear 0..1 rgb): the nether portal's purples, or other colours."""
     yy, xx, ang, rad = _grid(h, w)
     v = 0.5 + 0.5 * np.sin(ang * 3.0 + rad * 26.0 - ph * 5.0)
     v = 0.7 * v + 0.3 * (0.5 + 0.5 * np.sin(xx / w * 18.0 + yy / h * 11.0 + ph * 7.0))
     v = np.floor(v * 6.0) / 6.0                                        # banded, like the game's texture
-    c0 = np.array([0.20, 0.02, 0.50], np.float32)
-    c1 = np.array([0.80, 0.52, 1.00], np.float32)
+    c0 = np.array(c0, np.float32)
+    c1 = np.array(c1, np.float32)
     return c0[None, None] + (c1 - c0)[None, None] * v[..., None]
 
 
@@ -607,6 +744,11 @@ def transition_overlay(img, kind, amount, phase):
         f = f * (1 - amount) + ov * amount
     elif kind == 'end':
         ov = starfield(h, w, phase)
+        f = f * (1 - amount) + ov * amount
+    elif kind == 'sift':
+        # the Deep Dark Portal: its teal and pink swirl, the world wobbling
+        f = wobble((f * 255).astype(np.uint8), amount, phase).astype(np.float32) / 255.0
+        ov = swirl(h, w, phase * 1.2, c0=(0.02, 0.34, 0.38), c1=(1.00, 0.70, 0.84))
         f = f * (1 - amount) + ov * amount
     elif kind == 'white':
         ov = np.array([1.0, 0.96, 1.0], np.float32)

@@ -7,6 +7,9 @@ NETHER     out of a portal on a ledge high over the lava ocean, a second drop, l
            fortress bridge and down into the End portal at its end.
 THE END    off the obsidian platform over the void, up to the ring of obsidian pillars, a slalom between them while
            the dragon swoops, a corkscrew round a pillar, and the dive into the exit portal under the perched dragon.
+DEEP DARK  out of the dark over the ancient city, round its tower, and straight at the great portal as it wakes.
+THE SIFT   out of the portal on a siftslate cliff, down into the Singer's Meadow, through the white trees and the blue
+           grass, low over an ichor lake, under the ribs of a giant fossil, and into the rift that leads home.
 
 Heights (z): overworld river 20, mesa rim 100; nether lava sea 31; end island top about 62, void below.
 """
@@ -112,7 +115,47 @@ def the_end():
     return pb.build(name='end')
 
 
+def deep():
+    pb = TK.PathBuilder((0.0, -60.0, 40.0), yaw=0.0, pitch=0.0, v=31.0)
+    pb.mark('start')
+    pb.seg(22, pitch=-8)                     # out over the city, dipping
+    pb.seg(26, turn=35, pitch=0)             # round the tower
+    pb.mark('tower')
+    pb.seg(24, turn=-35)                     # square onto the portal
+    pb.mark('approach')
+    pb.powered_on(36.0, 20.0)
+    pb.seg(26)
+    pb.powered_off()
+    pb.mark('portal')
+    pb.seg(10)
+    return pb.build(name='deep')
+
+
+def sift():
+    pb = TK.PathBuilder((0.0, -150.0, 88.0), yaw=0.0, pitch=0.0, v=30.0)
+    pb.mark('start')
+    pb.powered_on(32.0, 24.0)
+    pb.seg(16)
+    pb.powered_off()
+    pb.mark('drop')
+    pb.seg(10, pitch=-34)
+    pb.seg(36, pitch=-56)
+    pb.seg(26, pitch=0)                      # pull-out over the meadow
+    pb.mark('meadow')
+    pb.seg(46, turn=-55)                     # left, through the white trees
+    pb.seg(46, turn=70)                      # right, down to the lake
+    pb.mark('lake')
+    pb.seg(40, turn=-15)                     # low over the ichor
+    pb.mark('fossil')
+    pb.seg(34, pitch=3)                      # under the fossil's ribs
+    pb.seg(16, pitch=16)
+    pb.seg(14, pitch=0)
+    pb.mark('rift')
+    pb.seg(10)
+    return pb.build(name='sift')
+
+
 if __name__ == '__main__':
-    for f in (overworld, nether, the_end):
+    for f in (overworld, nether, the_end, deep, sift):
         tr = f()
         print(tr.summary())

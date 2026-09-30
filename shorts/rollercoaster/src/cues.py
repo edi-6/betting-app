@@ -12,15 +12,11 @@ import numpy as np
 import fx
 import ride as RD
 import rider
-import world_end
-import world_nether
-import world_over
 
 
 def load_metas():
-    return {'over': RD.load_meta('over', world_over.build, ['world_over.py']),
-            'nether': RD.load_meta('nether', world_nether.build, ['world_nether.py']),
-            'end': RD.load_meta('end', world_end.build, ['world_end.py'])}
+    from main import WORLDS
+    return {key: RD.load_meta(key, mod.build, [src]) for key, mod, src in WORLDS}
 
 
 def _nearest(points, eye):
@@ -36,9 +32,13 @@ def build(ride=None):
     ride = ride or RD.Ride(load_metas())
     fx.RD_META = ride.metas
     o, n, e = ride.tracks['over'], ride.tracks['nether'], ride.tracks['end']
+    dp, sf = ride.tracks['deep'], ride.tracks['sift']
     ns = fx.NetherStory(n, ride.metas.get('nether', {}))
     es = fx.EndStory(e, ride.metas.get('end', {}))
-    fx._STORY['nether'], fx._STORY['end'] = ns, es
+    ds = fx.DeepStory(dp, ride.metas.get('deep', {}))
+    fs = fx.SiftStory(sf, ride.metas.get('sift', {}))
+    fx._STORY.update(nether=ns, end=es, deep=ds, sift=fs)
+    mdp, msf = ride.metas.get('deep', {}), ride.metas.get('sift', {})
     mo, mn, me = ride.metas.get('over', {}), ride.metas.get('nether', {}), ride.metas.get('end', {})
     falls = [(x, y, 60.0) for (x, y, wd) in mn.get('lava_falls', [])]
     fires = list(mn.get('fires', []))
@@ -81,6 +81,14 @@ def build(ride=None):
             q = _nearest(crystals, eye)
             if q is not None:
                 src['crystal'] = q.tolist()
+        if sg.world == 'deep' and 'gate' in mdp:
+            src['gate'] = np.asarray(mdp['gate']['center'], float).tolist()
+        if sg.world == 'sift':
+            q = _nearest([b[0] for b in fs.blubs], eye)
+            if q is not None and np.linalg.norm(q - eye) < 30.0:
+                src['blub'] = q.tolist()
+            if 'portals' in msf:
+                src['rift'] = np.asarray(msf['portals']['rift']['center'], float).tolist()
         c['src'] = {k: [round(x, 2) for x in v_] for k, v_ in src.items()}
         frames.append(c)
 
@@ -104,9 +112,17 @@ def build(ride=None):
         'perch': vt('C', min(es.t_perch, ride.segments[2].tau1)),
         'roar': vt('C', min(es.t_roar, ride.segments[2].tau1)),
         'portal_c': float(ride.starts[3]),
+        'wake': vt('E', ds.t_wake),
+        'gate': float(ride.starts[4]),
+        'sift_drop': vt('F', sf.time(sf.marks['drop'])),
+        'meadow': vt('F', sf.time(sf.marks['meadow'])),
+        'lake': vt('F', sf.time(sf.marks['lake'])),
+        'fossil': vt('F', sf.time(sf.marks['fossil'])),
+        'rift': float(ride.starts[5]),
         'end': float(ride.duration),
         'toast_b': float(ride.starts[1]) + 0.7,
         'toast_c': float(ride.starts[2]) + 0.7,
+        'toast_f': float(ride.starts[4]) + 0.8,
     }
     # the waterfall: when the eye goes through the curtain
     for i in range(1, len(frames)):

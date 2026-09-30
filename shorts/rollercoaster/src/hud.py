@@ -1,6 +1,6 @@
 """The interface over the ride, in the game's own style: the speed on the action bar (above where the hotbar would
 be), and the advancement toasts that slide in at the top right when the cart enters a new dimension
-("We Need to Go Deeper", "The End?"), as the game shows them.
+("We Need to Go Deeper", "The End?", and for the new one, "Welcome to the Sift"), as the game shows them.
 """
 import numpy as np
 
@@ -46,7 +46,8 @@ def blit_f(img, spr, x, y):
     img[y0:y1, x0:x1] = img[y0:y1, x0:x1] * (1 - a) + s[..., :3] * a
 
 
-TOASTS = [('B', 0.7, 'We Need to Go Deeper', 'obsidian'), ('C', 0.7, 'The End?', 'end_stone')]
+TOASTS = [('B', 0.7, 'We Need to Go Deeper', 'obsidian'), ('C', 0.7, 'The End?', 'end_stone'),
+          ('F', 0.8, 'Welcome to the Sift', 'sift_grass_side')]
 TOAST_LEN = 2.8
 
 

@@ -955,6 +955,221 @@ def crystal(rng, part):
 # ---------------------------------------------------------------------------------------------
 # the whole set
 # ---------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------
+# the deep dark (the ancient city) and the Sift
+# ---------------------------------------------------------------------------------------------
+def brick_pattern(rng, base, mortar, rows=4, width=8, lift=1.12):
+    img = speckle(base, 0.08, rng, 0.35)
+    for r in range(N):
+        for c in range(N):
+            off = 0 if (r // rows) % 2 == 0 else width // 2
+            if r % rows == rows - 1 or (c + off) % width == width - 1:
+                img[r, c] = mortar
+            elif r % rows == 0:
+                img[r, c] *= lift
+    return img
+
+
+def polished(rng, base, light, dark):
+    img = speckle(base, 0.05, rng, 0.5)
+    img[0, :] = img[:, 0] = light
+    img[-1, :] = img[:, -1] = dark
+    return img
+
+
+def reinforced_deepslate(rng, top=False):
+    """The ancient city's portal frame: a dark core in a pale bone-grey frame, with a lattice."""
+    img = speckle((52, 56, 58), 0.08, rng, 0.4)
+    img[0, :] = img[-1, :] = img[:, 0] = img[:, -1] = (148, 152, 142)
+    for (y, x) in ((1, 1), (1, 14), (14, 1), (14, 14)):
+        img[y, x] = (168, 172, 160)
+    if top:
+        img[7:9, 2:14] = (112, 118, 110)
+        img[2:14, 7:9] = (112, 118, 110)
+        img[7:9, 7:9] = (40, 44, 46)
+    else:
+        for c in (4, 11):
+            img[2:14, c] = (118, 124, 116)
+        img[2, 4:12] = img[13, 4:12] = (118, 124, 116)
+    return quant(img, 4)
+
+
+def sculk(rng, base=(12, 30, 38), spot=(46, 196, 206), specks=10, glow=0.9):
+    """Sculk: a dark living mat with glowing specks (the Sift's healthy and red variants share the pattern)."""
+    img = speckle(base, 0.25, rng, 0.35)
+    r = rng.random((N, N))
+    img[r < 0.16] = np.array(base) * 0.6
+    img[r > 0.93] = np.minimum(np.array(base) * 1.5 + 10, 255)
+    em = np.zeros((N, N))
+    for _ in range(specks):
+        y, x = (int(v) for v in rng.integers(0, N, 2))
+        img[y, x] = spot
+        em[y, x] = glow
+        if rng.random() < 0.5 and x + 1 < N:
+            img[y, x + 1] = np.array(spot) * 0.7
+            em[y, x + 1] = glow * 0.55
+    return quant(img, 3), em
+
+
+def sculk_sensor(rng, part):
+    img, em = sculk(rng, specks=4, glow=0.6)
+    img = np.array(img, float)
+    if part == 'side':
+        img[:2] = (20, 70, 80)
+        img[8:] = np.array(img[8:]) * 0.8
+    else:
+        for (y, x) in ((3, 3), (3, 12), (12, 3), (12, 12), (7, 7), (8, 8), (7, 8), (8, 7)):
+            img[y, x] = (80, 230, 230)
+            em[y, x] = 1.0
+    return quant(img, 3), em
+
+
+def sculk_shrieker(rng, part):
+    img, em = sculk(rng, specks=3, glow=0.5)
+    img = np.array(img, float)
+    if part == 'side':
+        img[:4] = speckle((214, 208, 186), 0.06, rng, 0.3)[:4]           # the bone rim
+    else:
+        yy, xx = np.mgrid[0:N, 0:N]
+        rr = np.hypot(yy - 7.5, xx - 7.5)
+        ring = (rr > 4.5) & (rr < 7.2)
+        img[ring] = (220, 214, 192)
+        img[(rr > 4.5) & (rr < 5.6) & ((xx + yy) % 3 == 0)] = (150, 146, 128)  # the teeth
+        core = rr < 3.0
+        img[core] = (40, 170, 180)
+        em[core] = 0.8
+    return quant(img, 3), em
+
+
+def siftslate(rng, top=False):
+    """The Sift's stone: red-orange, in strata."""
+    img = speckle((176, 84, 66), 0.10, rng, 0.4)
+    if not top:
+        for r in range(0, N, 4):
+            img[r] = np.array((146, 62, 54)) * rng.uniform(0.92, 1.05)
+        for r in range(2, N, 4):
+            img[r] *= 1.08
+    g = rng.random((N, N))
+    img[g > 0.94] = (218, 132, 92)
+    return quant(img, 4)
+
+
+def healthy_sculk(rng, col):
+    """The Sift's living sculk (green, orange, baby pink): brighter, with soft glowing specks."""
+    img = speckle(col, 0.16, rng, 0.35)
+    r = rng.random((N, N))
+    img[r < 0.18] = np.array(col) * 0.72
+    em = np.zeros((N, N))
+    for _ in range(7):
+        y, x = (int(v) for v in rng.integers(0, N, 2))
+        img[y, x] = np.minimum(np.array(col) * 1.3 + 30, 255)
+        em[y, x] = 0.35
+    return quant(img, 4), em
+
+
+def sift_grass(rng, side=False, soil=None):
+    """Pink grass on red sculk."""
+    top = speckle((238, 134, 158), 0.12, rng, 0.3)
+    d = rng.random((N, N))
+    top[d < 0.12] *= 0.84
+    top[d > 0.92] *= 1.1
+    if not side:
+        return quant(top, 4)
+    img = np.array(soil, float).copy()
+    for c in range(N):
+        k = int(rng.integers(2, 6))
+        img[:k, c] = top[:k, c]
+    return quant(img, 4)
+
+
+def sift_log(rng, top=False):
+    """The Sift's white trees."""
+    if top:
+        return log_top(rng, ring=(236, 232, 222), ring2=(212, 208, 198), bark=(224, 222, 214))
+    img = speckle((228, 226, 216), 0.06, rng, 0.3)
+    for c in range(N):
+        if rng.random() < 0.3:
+            img[:, c] *= 0.9
+    for _ in range(6):
+        y, x = (int(v) for v in rng.integers(0, N - 1, 2))
+        img[y:y + 2, x] = (178, 196, 210)
+    return quant(img, 4)
+
+
+def ichor(rng):
+    """The still frame of the ichor: bands of warm colours that the shader swirls and shifts."""
+    pal = np.array([(250, 132, 62), (242, 92, 122), (196, 72, 170), (92, 172, 196), (252, 192, 92)], float)
+    rr, cc = np.mgrid[0:N, 0:N]
+    k = (rr * 0.55 + cc * 0.35 + 2.0 * np.sin(cc * 0.7) + 1.5 * np.sin(rr * 0.4)).astype(int) % len(pal)
+    img = pal[k] * (0.9 + 0.2 * rng.random((N, N, 1)))
+    return quant(img, 4), np.full((N, N), 0.55)
+
+
+def bone_block(rng, top=False):
+    img = speckle((222, 218, 196), 0.05, rng, 0.3)
+    if top:
+        img[3:13, 3:13] = speckle((206, 200, 176), 0.05, rng, 0.3)[3:13, 3:13]
+        img[6:10, 6:10] = (232, 228, 208)
+    else:
+        for c in (3, 7, 11):
+            img[:, c] = (190, 184, 160)
+    img[0, :] = img[-1, :] = (176, 170, 146)
+    return quant(img, 4)
+
+
+def sift_plant(rng, kind):
+    """The Sift's plants: blue and pink grass, the pale-blue vines hanging from the trees, three flowers."""
+    img = np.zeros((N, N, 3))
+    a = np.zeros((N, N), np.uint8)
+    if kind in ('blue_grass', 'pink_grass'):
+        base = np.array((78, 176, 206)) if kind == 'blue_grass' else np.array((244, 146, 176))
+        for _ in range(10):
+            c = int(rng.integers(1, 15))
+            h = int(rng.integers(7, 16))
+            col = base * rng.uniform(0.8, 1.12)
+            lean = rng.uniform(-0.3, 0.3)
+            for k in range(h):
+                cc = int(np.clip(round(c + lean * k), 0, N - 1))
+                img[N - 1 - k, cc] = col * (0.75 + 0.45 * k / h)
+                a[N - 1 - k, cc] = 255
+    elif kind == 'sift_vines':
+        for c in range(0, N, 2):
+            h = int(rng.integers(6, 16))
+            for k in range(h):
+                img[k, c] = np.array((172, 222, 242)) * rng.uniform(0.85, 1.1)
+                a[k, c] = 255
+            if h > 3:
+                img[h - 1, c] = (230, 250, 255)
+    else:
+        petal = {'green_flower': (120, 220, 110), 'yellow_flowers': (252, 222, 80),
+                 'pale_blue_flower': (170, 214, 252)}[kind]
+        stems = (7,) if kind != 'yellow_flowers' else (3, 8, 12)
+        for c in stems:
+            top = 5 if kind != 'yellow_flowers' else int(rng.integers(7, 11))
+            img[top + 2:16, c] = (70, 150, 110)
+            a[top + 2:16, c] = 255
+            for (dr, dc) in ((0, 0), (-1, 0), (1, 0), (0, -1), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)):
+                r_, c_ = top + dr, c + dc
+                if 0 <= c_ < N:
+                    img[r_, c_] = np.array(petal) * rng.uniform(0.85, 1.1)
+                    a[r_, c_] = 255
+            img[top, c] = (255, 250, 220)
+    return quant(img, 4), a
+
+
+def blub(rng, part):
+    """The blub: a small glowing rabbit-like mob, soft and pale."""
+    img = speckle((206, 246, 236), 0.05, rng, 0.4)
+    em = np.full((N, N), 0.55)
+    if part == 'face':
+        img[6:8, 4:6] = img[6:8, 10:12] = (30, 46, 60)          # eyes
+        em[6:8, 4:6] = em[6:8, 10:12] = 0.0
+        img[10, 7:9] = (240, 150, 170)                         # a little nose
+    if part == 'ear':
+        img[3:13, 5:11] = (246, 190, 210)
+    return quant(img, 3), em
+
+
 def make_all(seed=7):
     rng = _rng(seed)
     T = {}
@@ -1157,6 +1372,59 @@ def make_all(seed=7):
     for part in ('frame', 'core'):
         img, a, em = crystal(rng, part)
         put('crystal_' + part, img, a, emit=em)
+    # the deep dark and the Sift (drawn from a random stream of their own, so everything above stays the same)
+    rng = _rng(seed + 101)
+    put('deepslate_bricks', quant(brick_pattern(rng, (66, 66, 72), (36, 36, 42)), 4))
+    put('polished_deepslate', quant(polished(rng, (74, 74, 80), (94, 94, 100), (48, 48, 54)), 4))
+    ch = polished(rng, (72, 72, 78), (92, 92, 98), (46, 46, 52))
+    for k in range(3, 13):
+        ch[3, k] = ch[12, k] = ch[k, 3] = ch[k, 12] = (44, 44, 50)
+    ch[6:10, 6:10] = (58, 58, 64)
+    ch[7:9, 7:9] = (38, 38, 44)
+    put('chiseled_deepslate', quant(ch, 4))
+    put('reinforced_deepslate', reinforced_deepslate(rng))
+    put('reinforced_deepslate_top', reinforced_deepslate(rng, top=True))
+    img, em = sculk(rng)
+    put('sculk', img, emit=em)
+    for part in ('side', 'top'):
+        img, em = sculk_sensor(rng, part)
+        put('sculk_sensor_' + part, img, emit=em)
+        img, em = sculk_shrieker(rng, part)
+        put('sculk_shrieker_' + part, img, emit=em)
+    put('siftslate', siftslate(rng))
+    put('siftslate_top', siftslate(rng, top=True))
+    put('siftslate_bricks', quant(brick_pattern(rng, (170, 80, 64), (110, 46, 42)), 4))
+    rs, em = sculk(rng, base=(150, 36, 62), spot=(255, 158, 178), specks=12, glow=0.45)
+    put('red_sculk', rs, emit=em)
+    for name, col in (('healthy_sculk', (72, 176, 116)), ('healthy_sculk_orange', (224, 124, 64)),
+                      ('healthy_sculk_pink', (244, 176, 196))):
+        img, em = healthy_sculk(rng, col)
+        put(name, img, emit=em)
+    put('sift_grass_top', sift_grass(rng))
+    put('sift_grass_side', sift_grass(rng, side=True, soil=rs))
+    put('sift_log', sift_log(rng))
+    put('sift_log_top', sift_log(rng, top=True))
+    lv, la = leaves(rng, col=(150, 214, 228), holes=0.22)
+    put('sift_leaves', lv, la)
+    img, em = ichor(rng)
+    put('ichor', img, emit=em)
+    put('bone_block_side', bone_block(rng))
+    put('bone_block_top', bone_block(rng, top=True))
+    bs = speckle((76, 114, 178), 0.10, rng, 0.4)
+    bs[::5] *= 0.82
+    put('blue_stone', quant(bs, 4))
+    cor = speckle((246, 130, 120), 0.14, rng, 0.35)
+    pores = rng.random((N, N))
+    cor[pores < 0.12] = (196, 84, 86)
+    cor[pores > 0.9] = (255, 176, 160)
+    put('coral_block', quant(cor, 4))
+    put('sift_sand', quant(speckle((226, 194, 150), 0.07, rng, 0.3), 4))
+    for kind in ('blue_grass', 'pink_grass', 'sift_vines', 'green_flower', 'yellow_flowers', 'pale_blue_flower'):
+        img, a = sift_plant(rng, kind)
+        put(kind, img, a)
+    for part in ('body', 'face', 'ear'):
+        img, em = blub(rng, part)
+        put('blub_' + part, img, emit=em)
     return T, E
 
 

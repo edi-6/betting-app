@@ -351,6 +351,28 @@ add(Block('nether_brick_fence', 'model', opaque=False, model=m_fence('nether_bri
 for p in ('tall_grass', 'poppy', 'dandelion', 'cornflower', 'wheat', 'wheat_young', 'dead_bush', 'sugar_cane',
           'cobweb'):
     add(Block(p, 'cross', opaque=False, cutout=True, material='plant' if p != 'cobweb' else 'terrain'))
+# the deep dark (the ancient city)
+for n in ('deepslate_bricks', 'polished_deepslate', 'chiseled_deepslate', 'sculk'):
+    add(Block(n))
+add(Block('reinforced_deepslate', tex={'top': 'reinforced_deepslate_top', 'side': 'reinforced_deepslate'}))
+add(Block('sculk_sensor', 'model', opaque=False, soul=6,
+          model=m_slab('sculk_sensor_side', 'sculk_sensor_top')))
+add(Block('sculk_shrieker', 'model', opaque=False, soul=3,
+          model=m_slab('sculk_shrieker_side', 'sculk_shrieker_top')))
+# the Sift
+add(Block('siftslate', tex={'top': 'siftslate_top', 'side': 'siftslate'}))
+for n in ('siftslate_bricks', 'red_sculk', 'healthy_sculk', 'healthy_sculk_orange', 'healthy_sculk_pink',
+          'blue_stone', 'coral_block'):
+    add(Block(n))
+add(Block('sift_sand', material='ground'))
+add(Block('sift_grass_block', tex={'top': 'sift_grass_top', 'bottom': 'red_sculk', 'side': 'sift_grass_side'},
+          material='ground'))
+add(Block('sift_log', tex={'top': 'sift_log_top', 'side': 'sift_log'}))
+add(Block('sift_leaves', opaque=False, cutout=True, material='leaf'))
+add(Block('bone_block', tex={'top': 'bone_block_top', 'side': 'bone_block_side'}))
+add(Block('ichor', light=11))
+for p in ('blue_grass', 'pink_grass', 'sift_vines', 'green_flower', 'yellow_flowers', 'pale_blue_flower'):
+    add(Block(p, 'cross', opaque=False, cutout=True, material='plant'))
 
 B = {b.name: b.id for b in REG}
 NBLOCKS = len(REG)

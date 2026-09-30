@@ -48,9 +48,13 @@ def cart_boxes():
     return out
 
 
-def portal_frames(n=32, size=16, seed=3):
-    """The nether portal's swirl, animated: n frames of (size, size, 4) and their emission. Two interleaved spirals
-    of purple, drifting, in the game's palette."""
+NETHER_PAL = [(52, 6, 124), (92, 16, 190), (132, 44, 236), (176, 96, 255), (214, 150, 255)]
+SIFT_PAL = [(8, 62, 76), (20, 128, 140), (96, 196, 192), (214, 96, 150), (244, 186, 214)]
+
+
+def portal_frames(n=32, size=16, seed=3, pal=None):
+    """A portal's swirl, animated: n frames of (size, size, 4) and their emission. Two interleaved spirals,
+    drifting: the nether portal's purples, or (pal=SIFT_PAL) the Deep Dark Portal's teal and pink."""
     rng = np.random.default_rng(seed)
     yy, xx = np.mgrid[0:size, 0:size] + 0.5
     cx = cy = size / 2
@@ -58,7 +62,7 @@ def portal_frames(n=32, size=16, seed=3):
     rad = np.hypot(xx - cx, yy - cy) / size
     jit = rng.random((size, size))
     layers, emits = [], []
-    pal = np.array([(52, 6, 124), (92, 16, 190), (132, 44, 236), (176, 96, 255), (214, 150, 255)], float)
+    pal = np.array(pal or NETHER_PAL, float)
     for f in range(n):
         ph = 2 * np.pi * f / n
         v = 0.5 + 0.5 * np.sin(ang * 2 + rad * 14.0 - ph * 2 + jit * 0.8)
@@ -141,6 +145,8 @@ def register(r):
     r.add_kind('cart', EN.boxes_mesh(cart_boxes(), at, (8, 8, 0)), tex='blocks')
     pl, pe = portal_frames()
     r.add_kind('nether_portal', vquad_mesh(), pl, emit=pe)
+    pl, pe = portal_frames(seed=9, pal=SIFT_PAL)
+    r.add_kind('sift_portal', vquad_mesh(), pl, emit=pe)
     el, ee = end_portal_layers()
     r.add_kind('end_portal', quad_mesh(), el, emit=ee)
     fl, fe = fire_frames()
@@ -148,8 +154,9 @@ def register(r):
     return S
 
 
-def nether_portal_rows(center, width, height, normal, t, frames=32, fps=16.0):
-    """The portal's surface as one 1x1 quad per block (the texture tiles like the game's), animated."""
+def nether_portal_rows(center, width, height, normal, t, frames=32, fps=16.0, kind='nether_portal', glow=1.0):
+    """The portal's surface as one 1x1 quad per block (the texture tiles like the game's), animated. glow < 1
+    dims it (a portal waking up)."""
     n = np.asarray(normal, float)
     f = int(t * fps) % frames
     # the quad faces -y in its own frame: turn it so it faces along the normal
@@ -162,8 +169,8 @@ def nether_portal_rows(center, width, height, normal, t, frames=32, fps=16.0):
     for i in range(width):
         for k in range(height):
             p = c + right * (i - (width - 1) / 2) + up * (k - (height - 1) / 2)
-            out.append(('nether_portal', [*p, *q, 1.0, 1.0, 1.0, (f + i * 3 + k * 5) % frames, 1, 1, 1, 0.9,
-                                          gfx.MAT_GLOW]))
+            out.append((kind, [*p, *q, 1.0, 1.0, 1.0, (f + i * 3 + k * 5) % frames, glow, glow, glow, 0.9 * glow,
+                               gfx.MAT_GLOW]))
     return out
 
 

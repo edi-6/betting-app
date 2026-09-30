@@ -23,6 +23,10 @@ def events(sc):
         return fx.nether_events(sc)
     if w == 'end':
         return fx.end_events(sc)
+    if w == 'deep':
+        return fx.deep_events(sc)
+    if w == 'sift':
+        return fx.sift_events(sc)
     return [], [], None
 
 
@@ -34,11 +38,12 @@ def transition(ride, f):
     for i, sg in enumerate(segs):
         end = st[i + 1]
         nxt = segs[(i + 1) % len(segs)]
-        kind = {('A', 'B'): 'nether', ('B', 'C'): 'end', ('C', 'D'): 'white'}.get((sg.name, nxt.name))
+        kind = {('A', 'B'): 'nether', ('B', 'C'): 'end', ('C', 'E'): 'end', ('E', 'F'): 'sift',
+                ('F', 'D'): 'white'}.get((sg.name, nxt.name))
         if kind is None:
             continue
-        lead = {'nether': 0.30, 'end': 0.24, 'white': 0.16}[kind]
-        tail = {'nether': 0.45, 'end': 0.50, 'white': 0.70}[kind]
+        lead = {'nether': 0.30, 'end': 0.24, 'sift': 0.30, 'white': 0.16}[kind]
+        tail = {'nether': 0.45, 'end': 0.50, 'sift': 0.55, 'white': 0.70}[kind]
         if end - lead <= tv < end:
             u = (tv - (end - lead)) / lead
             return kind, float(u * u), tv - end

@@ -31,6 +31,15 @@ PRESETS = {
                    clouds=False),
     # the End: the game's dark, blotchy purple-grey sky (drawn in pixel blocks)
     'end': dict(sun=sun_dir(0.0, 60.0), clouds=False, end=True),
+    # the deep dark: no sky, a cold near-black the fog blends into
+    'deep': dict(sun=sun_dir(0.0, 60.0), zenith=(0.004, 0.010, 0.016), horizon_sun=(0.010, 0.026, 0.036),
+                 horizon_away=(0.010, 0.026, 0.036), glow=(0.0, 0.0, 0.0), glow_pow=(4.0, 20.0, 400.0),
+                 clouds=False),
+    # the Sift: a turquoise sky, a pink glow round its sun, pink-lit clouds
+    'sift': dict(sun=sun_dir(235.0, 30.0), zenith=(0.012, 0.20, 0.25), horizon_sun=(0.56, 0.62, 0.66),
+                 horizon_away=(0.10, 0.46, 0.50), glow=(1.1, 0.45, 0.62), glow_pow=(4.0, 22.0, 450.0),
+                 cloud_sun=(1.9, 1.3, 1.5), cloud_amb_lo=(0.10, 0.24, 0.28), cloud_amb_hi=(0.34, 0.54, 0.58),
+                 coverage=0.24, sun_scale=0.9),
     'sunset': dict(sun=sun_dir(200.0, 5.0), zenith=(0.10, 0.17, 0.40), horizon_sun=(1.70, 0.78, 0.32),
                    horizon_away=(0.42, 0.40, 0.62), glow=(2.4, 1.0, 0.35), glow_pow=(4.0, 22.0, 400.0),
                    cloud_sun=(3.4, 1.55, 0.62), cloud_amb_lo=(0.18, 0.16, 0.26), cloud_amb_hi=(0.42, 0.36, 0.52),

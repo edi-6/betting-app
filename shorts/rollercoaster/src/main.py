@@ -23,11 +23,17 @@ import director as DR
 import props as PR
 import ride as RD
 import scene as SC
+import world_deep
 import world_end
 import world_nether
 import world_over
+import world_sift
 
-TITLE = 'Minecraft Rollercoaster Through All 3 Dimensions'
+TITLE = 'Minecraft Rollercoaster Through All 4 Dimensions'
+SKIES = ('golden', 'nether', 'end', 'deep', 'sift')
+WORLDS = (('over', world_over, 'world_over.py'), ('nether', world_nether, 'world_nether.py'),
+          ('end', world_end, 'world_end.py'), ('deep', world_deep, 'world_deep.py'),
+          ('sift', world_sift, 'world_sift.py'))
 
 
 def ffmpeg_exe():
@@ -86,13 +92,10 @@ def soundtrack(out, ride=None):
 
 def setup(preview=False, ss=1.0):
     w, h = (RD.W // 2, RD.H // 2) if preview else (RD.W, RD.H)
-    r = SC.make_renderer(w, h, ss=ss, skies=('golden', 'nether', 'end'), near_half=48.0, far_half=260.0)
+    r = SC.make_renderer(w, h, ss=ss, skies=SKIES, near_half=48.0, far_half=260.0)
     PR.register(r)
     DR.register(r)
-    metas = {}
-    metas['over'] = RD.load_world(r, 'over', world_over.build, ['world_over.py'])
-    metas['nether'] = RD.load_world(r, 'nether', world_nether.build, ['world_nether.py'])
-    metas['end'] = RD.load_world(r, 'end', world_end.build, ['world_end.py'])
+    metas = {key: RD.load_world(r, key, mod.build, [src]) for key, mod, src in WORLDS}
     ride = RD.Ride(metas)
     return r, ride
 

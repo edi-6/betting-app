@@ -554,6 +554,15 @@ def braam(ms, dur, rng):
     return norm(y * env, 0.9)
 
 
+def note_block(m, rng):
+    """A note block (the game's harp): a bright pluck that dies away quickly."""
+    dur = 0.9
+    x = modal(dur, midi_hz(m), (1.0, 2.0, 3.0, 4.1), (1.0, 0.35, 0.15, 0.05), (0.45, 0.22, 0.12, 0.07), rng, 0.0015)
+    n = len(x)
+    x += 0.15 * hp(rng.standard_normal(n), 3000, 2) * expenv(n, 0.003)
+    return norm(x * np.clip(np.arange(n) / SR / 0.0015, 0, 1), 0.8)
+
+
 def drone(ms, dur, rng, cutoff=900.0):
     n = int(dur * SR)
     x = np.zeros(n)
@@ -788,13 +797,17 @@ def make_toast(rng):
 
 
 def make_heartbeat(rng):
+    """Lub-dub: a deep thump with a knock on top (so a phone speaker hears it too)."""
     dur = 0.5
     n = int(dur * SR)
     x = np.zeros(n)
     for dt, a in ((0.0, 1.0), (0.16, 0.7)):
         s = int(dt * SR)
-        x[s:] += a * sine_sweep((n - s) / SR, 70, 42, 0.03)[:n - s] * expenv(n - s, 0.06, 0.004)
-    return norm(lp(x, 200, 2), 0.9)
+        m = n - s
+        thump = sine_sweep(m / SR, 70, 42, 0.03)[:m] * expenv(m, 0.06, 0.004)
+        knock = bp(rng.standard_normal(m), 150, 420, 2) * expenv(m, 0.025, 0.002)
+        x[s:] += a * (lp(thump, 200, 2) + 0.5 * norm(knock) * 0.6)
+    return norm(x, 0.9)
 
 
 def make_chirp(rng):
@@ -852,6 +865,12 @@ E_BASS = [38, 34, 31, 33, 34]
 E_ARP = [[62, 65, 69, 74], [58, 62, 65, 70], [55, 58, 62, 67], [57, 61, 64, 69], [58, 62, 65, 70]]
 E_LEAD = [[], [], [(0, 79, 1.5), (1.5, 77, 0.5), (2, 74, 2.0)], [(0, 76, 1.0), (1, 79, 1.0), (2, 81, 2.0)],
           [(0, 82, 2.0), (2, 81, 2.0)]]
+# the Sift: the Overworld's theme again, a whole step up (E B C#m A): the last chorus
+S_CHORDS = [(64, 68, 71), (63, 66, 71), (64, 68, 73), (64, 69, 73)]
+S_BASS = [40, 35, 37, 33]
+S_UP = 2
+# the note blocks that wake the ancient city's portal
+WAKE = [59, 64, 68, 71, 73, 76, 80, 83]
 
 
 def sidechain(t_kicks, n, depth=0.6, rel=0.14):
@@ -1033,8 +1052,64 @@ def score(ev, dur, rng):
     mus.add(snare_roll(rng, g.bar, 4, 32, g.bpm), g.t(4), 0.4, 0.0)
     mus.add(riser(rng, g.bar, 250, 9000), g.t(4), 0.35, 0.0)
 
+    # ---- THE DEEP DARK: the music falls away; a low drone, the warden's heartbeat; then the note blocks wake the
+    # portal, a choir swells, and a riser pulls into it
+    t_d, t_w, t_g = ev['portal_c'], ev['wake'], ev['gate']
+    mus.add(impact(rng, 0.6), t_d, 0.45, 0.0)
+    dr = drone((26, 27, 38), t_g - t_d + 0.3, rng, cutoff=320)
+    dr *= np.clip(np.arange(len(dr)) / SR / 0.4, 0, 1)
+    mus.add(dr, t_d + 0.05, 0.30, 0.0)
+    for tb in (t_d + 0.25, t_d + 1.0):
+        mus.add(make_heartbeat(rng), tb, 0.9, 0.0)
+    step = (t_g - t_w) / len(WAKE)
+    for k, m in enumerate(WAKE):
+        mus.add(note_block(m, rng), t_w + k * step, 0.55, 0.35 * np.sin(k * 1.3))
+        mus.add(note_block(m + 12, rng), t_w + k * step, 0.18, -0.3 * np.sin(k * 1.3))
+    L, R = choir((52, 59, 64, 68, 71), t_g - t_w, rng, attack=(t_g - t_w) * 0.8, release=0.2, vowel='o')
+    mus.add2(L, R, t_w, 0.5)
+    mus.add(riser(rng, t_g - t_w, 250, 10000), t_w, 0.4, 0.0)
+    mus.add(reverse_crash(rng, 0.8), t_g - 0.8, 0.55, 0.0)
+
+    # ---- THE SIFT: the finale, four bars in E (the Overworld's theme a whole step up), bells over the top
+    g = Grid(t_g, ev['rift'], 4)
+    mus.add(impact(rng, 1.2), t_g, 0.9, 0.0)
+    for b in range(4):
+        last = b == 3
+        for q in range(4):
+            if last and q >= 3:
+                break
+            kicks.append(g.t(b, q))
+            mus.add(kick(q % 2), g.t(b, q), 0.95)
+            if q in (1, 3):
+                mus.add(clap(q), g.t(b, q), 0.55, 0.05)
+                mus.add(snare(q, 0.8), g.t(b, q), 0.35, -0.05)
+        for s16 in range(16 if not last else 12):
+            op = s16 % 4 == 2
+            mus.add(hat(s16 % 3, op), g.t(b, s16 / 4), (0.20 if op else 0.13) * (0.75 + 0.25 * (s16 % 2 == 0)),
+                    0.35 * np.sin(s16 * 1.3))
+        if b in (0, 2):
+            mus.add(crash(b + 5), g.t(b), 0.5, -0.25)
+        L, R = supersaw([midi_hz(m) for m in S_CHORDS[b]] + [midi_hz(S_CHORDS[b][0] - 12)], g.bar, rng,
+                        attack=0.01, release=0.3, cutoff=4200)
+        pump.add2(L, R, g.t(b), 0.55)
+        L, R = choir(S_CHORDS[b], g.bar, rng, attack=0.15, release=0.4)
+        pump.add2(L, R, g.t(b), 0.35)
+        for e8 in range(8):
+            m = S_BASS[b] + (12 if e8 % 2 else 0)
+            pump.add(reese(m, g.beat * 0.45, rng, cutoff=900, drive=1.4), g.t(b, e8 / 2), 0.5 if e8 % 2 else 0.62,
+                     0.0)
+        for (bt, m, ln) in A_HOOK[b]:
+            dly.add(pluck(m + S_UP, ln * g.beat * 0.9, rng, bright=1.0, decay=0.4), g.t(b, bt), 0.42, -0.15)
+            mus.add(lead(m + S_UP, ln * g.beat * 0.92, rng), g.t(b, bt), 0.22, 0.15)
+            mus.add(bell(m + S_UP + 12, rng, 1.2, 0.8), g.t(b, bt), 0.10, 0.3)
+        for s16 in range(16):
+            mm = S_CHORDS[b][s16 % 3] + 12 + (12 if (s16 // 4) % 2 else 0)
+            dly.add(bell(mm, rng, 0.8, 0.7), g.t(b, s16 / 4), 0.07, 0.5 * np.sin(s16 * 1.1))
+    mus.add(snare_roll(rng, g.bar * 0.5, 8, 32, g.bpm), g.t(3, 2), 0.42, 0.0)
+    mus.add(riser(rng, g.bar * 0.7, 300, 10000), g.t(3, 1.2), 0.35, 0.0)
+
     # ---- THE WHITE FLASH and THE LIFT: D major for an instant, then the dominant held under the chain, building
-    t_c, t_e = ev['portal_c'], ev['end']
+    t_c, t_e = ev['rift'], ev['end']
     for k, m in enumerate((50, 57, 62, 66, 69, 74)):
         mus.add(bell(m + 12, rng, 2.0, 0.6), t_c + 0.01 * k, 0.12, (k - 2.5) * 0.15)
     L, R = choir((50, 57, 62, 66, 69), 0.9, rng, attack=0.02, release=0.9)
@@ -1109,7 +1184,8 @@ def build(cues, out_path, seed=5, stems=False):
     air = _per_sample([1.0 if c['air'] else 0.0 for c in frames], fps, n)
     lift = _per_sample([1.0 if c['lift'] else 0.0 for c in frames], fps, n)
     gf = _per_sample([c['g'] for c in frames], fps, n)
-    in_w = {w: _per_sample([1.0 if x == w else 0.0 for x in world], fps, n) for w in ('over', 'nether', 'end')}
+    in_w = {w: _per_sample([1.0 if x == w else 0.0 for x in world], fps, n) for w in ('over', 'nether', 'end', 'deep',
+                                                                                   'sift')}
     seg_d = _per_sample([1.0 if c['seg'] == 'D' else 0.0 for c in frames], fps, n)
     veff = v * k                                  # speed as heard (the slow motion slows everything)
 
@@ -1151,6 +1227,15 @@ def build(cues, out_path, seed=5, stems=False):
     genv = np.clip(gf - 1.6, 0, 2.5) / 2.5
     gw = lp(rng.standard_normal(n), 260, 2) * lp(np.concatenate([genv, np.zeros(SR)])[:n], 4, 1)
     sfx.add(norm(gw), 0.0, 0.35, 0.0)
+
+    # ---- the crest (the first frame): the chain lets go with a clunk, and the air starts to rush
+    x = modal(0.6, 140.0, (1.0, 2.7, 4.4), (1.0, 0.5, 0.3), (0.25, 0.12, 0.08), rng)
+    click = make_chain_click(rng)
+    x[:len(click)] += 0.6 * click
+    sfx.add(norm(x, 0.8), 0.0, 0.5, 0.0)
+    x = shaped_noise(2.4, lambda t: 300 + 1400 * (t / 2.4), lambda t: 1.2 + 0 * t,
+                     lambda t: np.clip(t / 2.0, 0, 1) ** 1.5 * np.clip((2.4 - t) / 0.4, 0, 1), rng)
+    sfx.add(norm(x), 0.0, 0.25, 0.0)
 
     # ---- the lift chain (the last seconds): the ratchet clicking, birds, a breeze
     cl = [make_chain_click(rng) for _ in range(6)]
@@ -1198,7 +1283,7 @@ def build(cues, out_path, seed=5, stems=False):
     g1, p1, _ = _source_track(frames, 'ghast1', fps, n, ref=24.0)
     i = int(ev['ghast_moan'] * SR)
     x = make_ghast_moan(rng, 1.9)
-    sfx.add_dyn(x, ev['ghast_moan'], 0.75 * g1[i:i + len(x)], p1[i:i + len(x)])
+    sfx.add_dyn(x, ev['ghast_moan'], 1.25 * np.maximum(g1[i:i + len(x)], 0.6), p1[i:i + len(x)])
     i = int((ev['ghast_shoot'] - 0.35) * SR)
     x = make_ghast_shriek(rng)
     sfx.add_dyn(x, ev['ghast_shoot'] - 0.35, 0.95 * np.maximum(g1[i:i + len(x)], 0.5), p1[i:i + len(x)])
@@ -1279,9 +1364,67 @@ def build(cues, out_path, seed=5, stems=False):
                      lambda t: np.exp(-((t - 0.6) / 0.3) ** 2), rng)
     sfx.add(norm(x), ev['swoop'] - 0.6, 0.8, 0.0)
 
-    # ---- the exit portal and the flash
+    # ---- the exit portal, into the deep dark
     sfx.add(make_end_plunge(rng), ev['portal_c'] - 0.2, 0.7, 0.0)
-    sfx.add(make_flash(rng), ev['portal_c'], 0.5, 0.0)
+    t_d, t_w, t_g = ev['portal_c'], ev['wake'], ev['gate']
+    dz = in_w['deep']
+    cave = lp(rng.standard_normal(n), 140, 2) + 0.25 * bp(rng.standard_normal(n), 300, 900, 2)
+    amb.add(norm(cave) * dz, 0.0, 0.30, 0.0)
+    t = t_d + 0.2
+    while t < t_g:
+        # drips, and the sculk sensors clicking as the cart goes by
+        if rng.random() < 0.4:
+            x = modal(0.25, rng.uniform(1800, 2600), (1.0, 2.3), (1.0, 0.3), (0.06, 0.03), rng)
+            amb.add(norm(x, 0.6), t, 0.10, rng.uniform(-0.8, 0.8))
+        else:
+            clk = np.zeros(int(0.12 * SR))
+            for c in range(int(rng.integers(3, 6))):
+                s0 = int(c * 0.018 * SR)
+                y = modal(0.03, rng.uniform(2600, 3600), (1.0, 1.6), (1.0, 0.4), (0.008, 0.005), rng)
+                clk[s0:s0 + len(y)] += y[:len(clk) - s0]
+            amb.add(norm(clk, 0.6), t, 0.12, rng.uniform(-0.8, 0.8))
+        t += rng.uniform(0.12, 0.3)
+    gg, gp, _ = _source_track(frames, 'gate', fps, n, ref=30.0, maxg=1.3)
+    x = make_portal_hum(rng, t_g - t_w + 0.3)
+    i = int(t_w * SR)
+    sfx.add_dyn(resample(x, 1.3), t_w, 0.5 * np.maximum(gg[i:i + len(x)], 0.4), gp[i:i + len(x)])
+    sfx.add(make_portal_whoosh(rng, 2.0), t_g - 0.5, 0.75, 0.0)
+
+    # ---- the Sift: the souls' shimmer, the blubs squeaking as the cart passes, the ichor's gloop, the fossil's ribs
+    fz = in_w['sift']
+    shim = np.zeros(n)
+    for f0 in (1318.5, 1661.2, 1975.5, 2637.0):
+        shim += np.sin(2 * np.pi * f0 * tt + 3.0 * np.sin(2 * np.pi * 0.37 * tt + f0)) * \
+            (0.5 + 0.5 * np.sin(2 * np.pi * rng.uniform(0.2, 0.6) * tt + f0))
+    amb.add(norm(shim) * fz, 0.0, 0.035, 0.0)
+    amb.add(norm(bp(rng.standard_normal(n), 400, 2400, 2)) * fz, 0.0, 0.06, 0.0)
+    bl = np.array([c['src']['blub'] if 'blub' in c['src'] else [1e3, 1e3, 1e3] for c in frames])
+    eyes = np.array([c['eye'] for c in frames])
+    Rs = np.array([c['R'] for c in frames])
+    bd = np.linalg.norm(bl - eyes, axis=1)
+    for i in range(1, len(frames) - 1):
+        if bd[i] < 12.0 and bd[i] <= bd[i - 1] and bd[i] < bd[i + 1]:
+            pan = float(np.clip(np.dot((bl[i] - eyes[i]) / max(bd[i], 1e-3), Rs[i]) * 1.2, -1, 1))
+            for k in range(3):
+                d_ = rng.uniform(0.06, 0.12)
+                m_ = int(d_ * SR)
+                tt_ = np.arange(m_) / SR
+                f = rng.uniform(1500, 2400) * (1 + 0.6 * np.sin(np.pi * tt_ / d_))
+                y = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.sin(np.pi * tt_ / d_) ** 2
+                sfx.add(norm(y, 0.5), i / fps - 0.25 + k * rng.uniform(0.08, 0.16), 0.35, pan)
+    t = ev['lake'] - 0.9
+    while t < ev['lake'] + 1.3:
+        sfx.add(make_lava_pop(rng) * 0.9, t, rng.uniform(0.12, 0.25), rng.uniform(-0.7, 0.7))
+        t += rng.exponential(0.09)
+    for k in range(8):
+        x = shaped_noise(0.16, lambda t: 500 + 900 * t / 0.16, lambda t: 1.0 + 0 * t,
+                         lambda t: np.sin(np.pi * np.clip(t / 0.16, 0, 1)) ** 2, rng)
+        sfx.add(norm(x), ev['fossil'] + 0.06 + k * 0.1, 0.30, 0.0)
+    sfx.add(make_toast(rng), ev['toast_f'], 0.4, 0.4)
+
+    # ---- the rift home, and the flash
+    sfx.add(make_portal_whoosh(rng, 1.4), ev['rift'] - 0.45, 0.6, 0.0)
+    sfx.add(make_flash(rng), ev['rift'], 0.5, 0.0)
 
     # ---- the music
     mus, pump, dly = score(ev, dur, rng)
@@ -1297,7 +1440,7 @@ def build(cues, out_path, seed=5, stems=False):
     # duck the music under the big moments
     duck = np.ones(n)
     for te, depth, ln in ((t_ex, 0.35, 0.8), (t_land, 0.3, 0.5), (ev['swoop'], 0.3, 1.2), (ev['roar'], 0.35, 1.4),
-                          (ev['ghast_shoot'] - 0.3, 0.2, 0.6)):
+                          (ev['ghast_shoot'] - 0.3, 0.25, 0.6), (ev['ghast_moan'], 0.4, 1.8)):
         duck *= 1 - depth * np.exp(-0.5 * ((tt - te - ln * 0.4) / (ln * 0.5)) ** 2)
     M_L, M_R = M_L * duck, M_R * duck
 

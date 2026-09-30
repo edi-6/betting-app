@@ -1,7 +1,8 @@
 cache/
-output/
+output*/
 preview/
 stills/
 sound/
+*.log
 __pycache__/
 *.pyc

@@ -1,4 +1,4 @@
-"""The mobs: the ghast, the ender dragon, endermen and the end crystals.
+"""The mobs: the ghast, the ender dragon, endermen, the end crystals, and the Sift's blubs.
 
 Every part is a box in block-model units (1/16 of a block), textured from the block atlas like a block model, and
 drawn as an instanced kind; a pose function turns time into one instance row per part. Model axes: x right,
@@ -75,6 +75,10 @@ def register(r):
     # end crystal: two frames and the core
     _box(r, at, 'crystal_frame', (-8, -8, -8), (8, 8, 8), 'crystal_frame')
     _box(r, at, 'crystal_core', (-4, -4, -4), (4, 4, 4), 'crystal_core')
+    # the blub (the Sift): a soft round body, face on +y, two long ears, a tuft of a tail
+    _box(r, at, 'blub_body', (-4, -4, 0), (4, 4, 7), 'blub_body', {'py': 'blub_face'})
+    _box(r, at, 'blub_ear', (-1, -0.5, 0), (1, 0.5, 7), 'blub_ear')
+    _box(r, at, 'blub_tail', (-1.5, -1.5, -1.5), (1.5, 1.5, 1.5), 'blub_body')
 
 
 def membrane_mesh():
@@ -157,6 +161,7 @@ def ghast_rows(pos, face_dir, t, shooting=False):
 # the ender dragon
 # ---------------------------------------------------------------------------------------------
 DRAGON_S = 2.6           # px -> blocks * 16 (so 1 px = 0.1625 blocks)
+DRAGON_SHEEN = 0.35      # a faint glow in its black hide, so its scales and shape read against the dark sky
 
 
 class Dragon:
@@ -203,12 +208,13 @@ class Dragon:
         # neck: five segments arching up from the chest; the head at its end
         perched = self.perch is not None and t >= self.perch[0]
         arch = 16.0 + (14.0 if perched else 0.0) + 10.0 * roar
-        p = np.array([0.0, 28.0, 4.0])
         qn = q
+        p_w = at((0.0, 28.0, 4.0))
         for k in range(5):
             bend = arch * (0.5 - k / 5.0) + 4.0 * np.sin(t * 1.4 + k * 0.6)
             qn = qm(qn, qa((1, 0, 0), bend * 0.35))
-            p_w = at(p) if k == 0 else p_w + rot(qn, np.array([0, 10.0, 0]) * S)
+            if k > 0:
+                p_w = p_w + rot(qn, np.array([0, 10.0, 0]) * S)
             out.append(row('dragon_seg', p_w + rot(qn, np.array([0, 5.0, 0]) * S), qn, DRAGON_S))
         neck_end = p_w + rot(qn, np.array([0, 10.0, 0]) * S)
         # the head: looks a little down when perched (at whoever is coming), the jaw drops when it roars
@@ -228,7 +234,6 @@ class Dragon:
         prev = at((0, -28.0, 0))
         for k in range(12):
             tt = t - 0.045 * (k + 1)
-            pk = np.asarray(self.path(tt)[0])
             qk, _ = self.frame(tt)
             tail_dir = rot(qk, np.array([0.0, -1.0, 0.0]))
             sway = 0.25 * np.sin(t * 2.2 - k * 0.5)
@@ -257,7 +262,35 @@ class Dragon:
             qfa = qm(qarm, qa((0, 1, 0), -tip * side), qa((0, 0, 1), 8.0 * side))
             out.append(row('dragon_forearm', elbow, qfa, scl))
             out.append(('dragon_membrane', [*elbow, *qfa, *scl, 1, 1, 1, 1, 0.0, MAT]))
+        for kind, data in out:
+            data[14] = max(data[14], DRAGON_SHEEN)
         return out, dict(head=neck_end + rot(qh, np.array([0, 24.0, 0]) * S), body=pos)
+
+
+# ---------------------------------------------------------------------------------------------
+# the blub
+# ---------------------------------------------------------------------------------------------
+BLUB_S = 2.0             # 8 px wide -> a block
+
+
+def blub_rows(pos, yaw_deg, t, phase=0.0):
+    """A blub at pos (its feet) facing yaw (0 = +y): hopping, squashing as it lands and stretching as it leaves the
+    ground, its ears flopping behind; it glows."""
+    S = BLUB_S / 16.0
+    ph = t * 2.6 + phase
+    hop = max(0.0, np.sin(ph))
+    squash = 1.0 + 0.22 * np.cos(ph * 2.0) * (1.0 if hop < 0.2 else 0.5)
+    q = qa((0, 0, 1), -yaw_deg)
+    base = np.asarray(pos, float) + np.array([0.0, 0.0, 0.9 * hop])
+    sz = (BLUB_S / squash ** 0.5, BLUB_S / squash ** 0.5, BLUB_S * squash)
+    out = [row('blub_body', base, q, sz, emit=0.3)]
+    flop = 18.0 + 40.0 * hop
+    for side in (-1, 1):
+        at_ = base + rot(q, np.array([side * 2.2, -1.0, 6.6 * squash]) * S)
+        out.append(row('blub_ear', at_, qm(q, qa((1, 0, 0), -flop), qa((0, 1, 0), side * 12.0)), BLUB_S,
+                       emit=0.28))
+    out.append(row('blub_tail', base + rot(q, np.array([0.0, -4.4, 2.0]) * S), q, BLUB_S, emit=0.28))
+    return out
 
 
 # ---------------------------------------------------------------------------------------------
