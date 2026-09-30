@@ -78,13 +78,19 @@ included so a real voice can be recorded over them.
 
 ```
 cd src
-python film.py render            # 3D intermediates into cache/frames (about 1.5 h at 1080p on 4 CPU cores)
-python film.py cues && python audio.py
-python film.py compose           # output/film_noaudio.mp4 and output/film_clean_noaudio.mp4
-python film.py srt               # release/voiceover.srt
-python thumbnail.py              # release/thumb_*.jpg
-python deliver.py git            # release/film/: the films in parts under 95 MB, with join scripts
+python film.py render                 # 3D intermediates into cache/frames (about 2 h at 1080p on 4 CPU cores)
+python film.py cues && python audio.py   # output/film_audio.wav
+python film.py compose                # output/parts, output/parts_clean: every shot with its interface and film look,
+                                      #   with and without subtitles (about 1 h)
+python film.py srt                    # release/voiceover.srt
+python thumbnail.py                   # release/thumb_*.jpg
+python deliver.py web ../output/web   # the clean film as a stream in pieces, for the release page
+python webpage.py ../output/web       # the release page
+python deliver.py git                 # release/film/: both films in parts under 95 MB, with join scripts
 ```
+`sh pipeline.sh` runs all of these but the page, in order. It can be run again after an interruption: render and
+compose skip the shots they have already finished.
+
 Add `--preview` to `render` / `compose` for a half-resolution pass, and `python film.py probe DIR --shots a,b` for
 composed stills of chosen shots.
 

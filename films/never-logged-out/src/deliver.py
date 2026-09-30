@@ -2,7 +2,7 @@
 
     python deliver.py master     # output/THE_PLAYER_WHO_NEVER_LOGGED_OUT.mp4 (+ _clean): the full-quality films
     python deliver.py git        # release/film/: compact HEVC copies split into < 95 MB parts, with join scripts
-    python deliver.py web DIR    # DIR: an HLS stream (fMP4 segments < 15 MB) for a player page
+    python deliver.py web DIR    # DIR: the clean film as an HLS stream (fMP4 pieces < 15 MB) for the release page
     python deliver.py preview    # output/preview_<30MB.mp4: a small copy for a quick look on a phone
 """
 import hashlib
@@ -118,7 +118,7 @@ def web(dst):
     for its download button (init.mp4 followed by every piece is itself one playable MP4). About 185 MiB in all: under
     the 200 MiB a phone app will save, and the 256 MB a page may hold."""
     import json
-    v, a = src(False)
+    v, a = src(True)                    # the clean film: the page shows his lines as captions it can turn off
     os.makedirs(dst, exist_ok=True)
     ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-b:v', '1900k',
        '-maxrate', '3000k', '-bufsize', '6000k', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', '48',
@@ -136,7 +136,7 @@ def web(dst):
     init = os.path.getsize(os.path.join(dst, 'init.mp4'))
     total = init + sum(s['bytes'] for s in segs)
     man = {'init': 'init.mp4', 'segments': segs, 'bytes': total, 'seconds': round(sum(s['dur'] for s in segs), 2),
-           'filename': NAME + '.mp4'}
+           'filename': NAME + '_no_subtitles.mp4'}
     with open(os.path.join(dst, 'manifest.json'), 'w') as fh:
         json.dump(man, fh)
     big = [s['file'] for s in segs if s['bytes'] > 15_000_000]

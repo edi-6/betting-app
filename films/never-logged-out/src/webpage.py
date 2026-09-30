@@ -194,12 +194,13 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
   </div>
 
   <div class="bar">
-    <button class="btn primary" id="dl" type="button">Download the film (MP4)</button>
+    <button class="btn primary" id="dl" type="button">Download the film, no subtitles (MP4)</button>
     <progress id="prog" max="1" value="0" hidden></progress>
     <span class="status" id="status" role="status"></span>
   </div>
-  <p class="note">This is the version with his lines burned in as subtitles. The clean version, with no subtitles, is
-    for recording your own voice-over and adding captions. It's in the repository under
+  <p class="note">This is the clean film, without his subtitles, ready for your voice-over. While you watch here,
+    his lines show as captions; turn them off with the player's CC button. The same lines are in the voice-over script
+    below, and in an SRT file for YouTube captions. The version with his lines burned in is in the repository under
     <code>films/never-logged-out/release/film/</code>, split into parts, with a script to join them.</p>
 
   <div class="tabs" role="tablist">
@@ -289,8 +290,24 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
 
   fetch('manifest.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (m) {
     manifest = m;
-    if (m) $('#dl').textContent = 'Download the film (MP4, ' + mb(m.bytes) + ' MB)';
+    if (m) $('#dl').textContent = 'Download the film, no subtitles (MP4, ' + mb(m.bytes) + ' MB)';
   }).catch(function () { manifest = null; });
+
+  // his lines as captions over the clean film, from the SRT on this page, placed where the film's own subtitles sit
+  function addCaptions(v) {
+    if (v.textTracks.length || typeof VTTCue === 'undefined') return;
+    var tr = v.addTextTrack('subtitles', 'His lines', 'en');
+    function sec(h, mi, s, ms) { return +h * 3600 + +mi * 60 + +s + +ms / 1000; }
+    $('#srt').textContent.trim().split(/\n\s*\n/).forEach(function (block) {
+      var ls = block.split('\n');
+      var m = /(\d+):(\d+):(\d+)[,.](\d+)\s*-->\s*(\d+):(\d+):(\d+)[,.](\d+)/.exec(ls[1] || '');
+      if (!m) return;
+      var cue = new VTTCue(sec(m[1], m[2], m[3], m[4]), sec(m[5], m[6], m[7], m[8]), ls.slice(2).join('\n'));
+      cue.snapToLines = false; cue.line = 78;
+      tr.addCue(cue);
+    });
+    tr.mode = 'showing';
+  }
 
   // --- watching: the film's HLS playlist (playlist.txt) and its pieces are published next to this page
   function cannotStream() {
@@ -302,6 +319,7 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
     var v = $('#player');
     var url = 'playlist.txt';
     $('#watch').hidden = true; $('#poster').hidden = true; v.hidden = false;
+    addCaptions(v);
     if (window.Hls && window.Hls.isSupported()) {
       var hls = new window.Hls({ maxBufferLength: 60 });
       hls.on(window.Hls.Events.ERROR, function (e, d) { if (d && d.fatal) { hls.destroy(); cannotStream(); } });
