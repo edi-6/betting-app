@@ -32,7 +32,22 @@ def blit(img, spr, x, y, alpha=1.0):
     img[y0:y1, x0:x1] = (reg * (1 - a) + s[..., :3] * a).astype(np.uint8)
 
 
+def blit_f(img, spr, x, y):
+    """blit onto a float image, in place (for the cover)."""
+    h, w = spr.shape[:2]
+    H, W = img.shape[:2]
+    x, y = int(round(x)), int(round(y))
+    x0, y0 = max(x, 0), max(y, 0)
+    x1, y1 = min(x + w, W), min(y + h, H)
+    if x1 <= x0 or y1 <= y0:
+        return
+    s = spr[y0 - y:y1 - y, x0 - x:x1 - x]
+    a = s[..., 3:4].astype(np.float32) / 255.0
+    img[y0:y1, x0:x1] = img[y0:y1, x0:x1] * (1 - a) + s[..., :3] * a
+
+
 TOASTS = [('B', 0.7, 'We Need to Go Deeper', 'obsidian'), ('C', 0.7, 'The End?', 'end_stone')]
+TOAST_LEN = 2.8
 
 
 def _toast_sprite(title, icon, scale):
@@ -72,22 +87,24 @@ def draw(img, ride, f, sc):
     img = img.copy()
     H, W = img.shape[:2]
     k = W / 1080.0
-    # the speed, on the action bar
+    # the speed, on the action bar: it fades in as the cart passes 30 km/h (so the lift hill, and the first frame
+    # the loop comes back to, are clean)
     kmh = sc['v'] * 3.6
-    if sc['seg'].name != 'D' or kmh > 30:
+    a = float(np.clip((kmh - 30.0) / 10.0, 0.0, 1.0))
+    if a > 0:
         txt = f'{int(round(kmh))} km/h'
         spr = _sprite(txt, max(2, int(round(6 * k))), (255, 255, 255))
-        blit(img, spr, (W - spr.shape[1]) / 2, H * 0.842)
+        blit(img, spr, (W - spr.shape[1]) / 2, H * 0.842, alpha=a)
     # the toasts
     tv = f / RD.FPS
     for (seg, at, title, icon) in TOASTS:
         i = [sg.name for sg in ride.segments].index(seg)
         t = tv - (ride.starts[i] + at)
-        if not (0 <= t < 3.4):
+        if not (0 <= t < TOAST_LEN):
             continue
         spr = _toast_sprite(title, icon, max(2, int(round(4 * k))))
         sw = spr.shape[1]
-        slide = min(t / 0.35, 1.0, (3.4 - t) / 0.35)
+        slide = min(t / 0.35, 1.0, (TOAST_LEN - t) / 0.35)
         slide = slide * slide * (3 - 2 * slide)
         x = W - sw * slide - 20 * k * slide
         blit(img, spr, x, 120 * k)

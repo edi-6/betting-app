@@ -5,8 +5,6 @@ Particles go to the renderer as dict(soft=(P, 8), glow=(P, 8)): pos3 size1 rgba4
 """
 import numpy as np
 
-import ride as RD
-
 
 def register(r):
     import mobs
@@ -77,7 +75,6 @@ class NetherStory:
     blocks over the rider's right shoulder in the middle of the (slow-motion) jump."""
 
     def __init__(self, tr, meta):
-        import props as PR
         import voxel as VX
         import world_nether
         self.tr = tr
@@ -192,7 +189,7 @@ class NetherStory:
         import mobs
         tau = sc['tau']
         rows, lights = [], []
-        soft, glow = [], []
+        soft, glow, streaks = [], [], []
         eye = sc['eye']
         # the ghasts: drifting, facing the cart, the shooting face (eyes and mouth open) around each shot
         for which, t_sh in ((1, self.t_shoot), (2, self.t_shoot2)):
@@ -270,12 +267,13 @@ class NetherStory:
         tl = tau - self.t_land
         if 0 <= tl < 0.75:
             rng = _rng(4242)
-            n = 160
+            n = 140
             te = self.t_land + rng.uniform(0.0, 0.42, n) ** 1.5
             side = np.where(np.arange(n) % 2, 1.0, -1.0)
             keep = rng.uniform(1.12, 1.42, n)
             spr = rng.uniform(1.5, 6.5, n)
             upv = rng.uniform(3.0, 8.5, n)
+            v_cam = self.tr.frame(self.tr.s_at(tau))[0] * self.tr.speed(self.tr.s_at(tau))
             for k in range(n):
                 age = tau - te[k]
                 if age < 0 or age > 0.34:
@@ -284,14 +282,20 @@ class NetherStory:
                 P = self.tr.pos(s_e)
                 T, R, U = self.tr.frame(s_e)
                 v = T * self.tr.speed(s_e) * keep[k] + R * side[k] * spr[k] + U * upv[k]
-                p = P + T * 0.45 + R * 0.46 * side[k] + v * age + np.array([0, 0, -16.0]) * age * age
+                v = v + np.array([0, 0, -32.0]) * age
+                p = P + T * 0.45 + R * 0.46 * side[k] + (v - np.array([0, 0, -32.0]) * age) * age + \
+                    np.array([0, 0, -16.0]) * age * age
                 a = 1.0 - age / 0.34
-                glow.append([*p, 0.08 + 0.07 * a, 1.0, 0.75 + 0.2 * a, 0.35 + 0.3 * a, a])
+                # a streak along its motion as seen from the moving seat (the camera's shutter)
+                tail = p - (v - v_cam) * 0.03
+                streaks.append([*p, *tail, 0.028, 0.9 * a])
+                if k % 4 == 0:
+                    glow.append([*p, 0.06, 1.0, 0.8, 0.4, 0.5 * a])
             if tl < 0.4:
                 P = self.tr.pos(self.tr.s_at(tau))
                 f = 1.0 - tl / 0.4
                 lights.append([*P, 7.0, 2.4 * f, 1.7 * f, 0.8 * f])
-        return rows, lights, soft, glow
+        return rows, lights, soft, glow, streaks
 
 
 def embers(sc, lava_z=LAVA_Z, radius=55.0):
@@ -326,7 +330,11 @@ def nether_events(sc):
     if 'nether' not in _STORY:
         _STORY['nether'] = NetherStory(sc['tr'], meta)
     st = _STORY['nether']
-    rows, lights, soft, glow = st.rows_lights_parts(sc)
+    rows, lights, soft, glow, streaks = st.rows_lights_parts(sc)
+    if streaks:
+        sc['streaks'] = np.array(streaks, np.float32)
+        if sc.get('renderer') is not None:
+            sc['renderer'].streak_col = (5.0, 2.6, 0.8)
     em = embers(sc)
     parts = dict(soft=np.array(soft, np.float32).reshape(-1, 8), glow=np.concatenate(
         [np.array(glow, np.float32).reshape(-1, 8), em.astype(np.float32)]))
@@ -344,7 +352,6 @@ def nether_events(sc):
                 lights.append([x, y, z + 0.7, 9.0, 2.4 * fl, 1.2 * fl, 0.35 * fl])
     # the End portal's surface at the bridge's end
     if 'end_portal' in meta:
-        import props as PR
         ep = meta['end_portal']
         f = int(sc['tau'] * 14) % 32
         for dx in (-1, 0, 1):
@@ -367,14 +374,18 @@ class EndStory:
         self.center = c
         t_sw = tr.time(tr.marks['dragon'])
         s_sw = tr.marks['dragon']
-        P_sw = tr.pos(s_sw)
         T_sw, _, _ = tr.frame(s_sw)
         Th = np.array([T_sw[0], T_sw[1], 0.0])
         Th /= np.linalg.norm(Th)
         Rh = np.array([Th[1], -Th[0], 0.0])
         t_end = tr.time(tr.length - 0.1)
         self.t_perch = t_end - 1.6
-        perch_body = c + np.array([10.0, 0.0, 6.5])
+        # it perches beside the fountain, left of the cart's dive, facing the track: the cart dives into the portal
+        # right under its roaring head (and never through it)
+        Tp, _, _ = tr.frame(tr.marks['portal'])
+        Tp = np.array([Tp[0], Tp[1], 0.0]) / np.hypot(Tp[0], Tp[1])
+        Lp = np.array([-Tp[1], Tp[0], 0.0])
+        perch_body = c + Lp * 17.0 + Tp * 1.0 + np.array([0.0, 0.0, 6.0])
         def cart(t):
             return tr.pos(tr.s_at(t))
         keys = [
@@ -385,14 +396,14 @@ class EndStory:
             (t_sw, cart(t_sw) + Th * 2.0 + np.array([0, 0, 8.0])),
             (t_sw + 0.9, cart(t_sw + 0.9) + Th * 26.0 - Rh * 12.0 + np.array([0, 0, 17.0])),
             (t_sw + 2.2, c + np.array([-30.0, 40.0, 40.0])),
-            (self.t_perch - 1.3, c + np.array([30.0, 26.0, 26.0])),
+            (self.t_perch - 1.3, c + Lp * 32.0 + Tp * 22.0 + np.array([0.0, 0.0, 22.0])),
             (self.t_perch, perch_body),
             (t_end + 2.0, perch_body),
         ]
         self.kt = np.array([k[0] for k in keys])
         self.kp = np.array([k[1] for k in keys])
         self.t_roar = t_end - 0.9
-        self.dragon = mobs.Dragon(self.path, perch=(self.t_perch, np.array([-1.0, 0.0, 0.0])))
+        self.dragon = mobs.Dragon(self.path, perch=(self.t_perch, -Lp))
         # endermen: a few on the island near the ride
         rng = _rng(5)
         H = meta.get('H')
@@ -484,6 +495,10 @@ def attention(world, tr, tau):
         w = float(np.clip((tau - (t_sw - 0.45)) / 0.3, 0, 1) * np.clip(((t_sw + 0.9) - tau) / 0.4, 0, 1))
         if w > 0:
             return st.path(tau)[0], 0.42 * w * w * (3 - 2 * w)
+        # the roar on the perch: a look up at its head, then back to the portal for the dive
+        w = float(np.clip((tau - (st.t_roar - 0.5)) / 0.3, 0, 1) * np.clip(((st.t_roar + 0.3) - tau) / 0.3, 0, 1))
+        if w > 0:
+            return st.dragon.rows(tau)[1]['head'], 0.3 * w * w * (3 - 2 * w)
         return None
     if world == 'nether':
         if 'nether' not in _STORY:
