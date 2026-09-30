@@ -1,0 +1,6 @@
+moderngl>=5.10
+glcontext>=3.0
+numpy>=1.24
+scipy>=1.10
+pillow>=10.0
+imageio-ffmpeg>=0.5
