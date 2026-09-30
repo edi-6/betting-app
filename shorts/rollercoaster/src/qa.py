@@ -34,7 +34,8 @@ def main():
     diff = np.abs(np.diff(F, axis=0)).mean(axis=(1, 2))
     cuts = []
     if cues:
-        cuts = [cues['events'][k] for k in ('portal_a', 'portal_b', 'portal_c', 'explosion', 'land')]
+        cuts = [cues['events'][k] for k in ('portal_a', 'portal_b', 'portal_c', 'gate', 'rift', 'explosion', 'land')
+                if k in cues['events']]
     print(f'{len(F)} frames ({len(F) / fps:.2f} s), mean luma {mean.min():.0f}..{mean.max():.0f}')
     bad = 0
     for i, m in enumerate(mean):
