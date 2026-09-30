@@ -45,7 +45,7 @@ PRESETS = {
     'sift_gold': dict(sun=sun_dir(165.0, 12.0), zenith=(0.020, 0.150, 0.240), horizon_sun=(1.55, 0.86, 0.62),
                       horizon_away=(0.20, 0.46, 0.52), glow=(2.0, 0.85, 0.80), glow_pow=(4.0, 22.0, 450.0),
                       cloud_sun=(3.4, 1.8, 1.55), cloud_amb_lo=(0.14, 0.22, 0.28), cloud_amb_hi=(0.40, 0.52, 0.58),
-                      coverage=0.34, sun_scale=1.0),
+                      coverage=0.34, sun_scale=1.0, ridges=2.0),
     'sunset': dict(sun=sun_dir(200.0, 5.0), zenith=(0.10, 0.17, 0.40), horizon_sun=(1.70, 0.78, 0.32),
                    horizon_away=(0.42, 0.40, 0.62), glow=(2.4, 1.0, 0.35), glow_pow=(4.0, 22.0, 400.0),
                    cloud_sun=(3.4, 1.55, 0.62), cloud_amb_lo=(0.18, 0.16, 0.26), cloud_amb_hi=(0.42, 0.36, 0.52),
@@ -178,9 +178,48 @@ def panorama(name, width=4096, height=1024):
         p = PRESETS[name]
         clear = gradient(p, width, height)
         c = bake_clouds(p, width, height)
-        pano = (clear * c[..., 3:4] + c[..., :3] * p.get('sun_scale', 1.0)).astype(np.float16)
+        pano = (clear * c[..., 3:4] + c[..., :3] * p.get('sun_scale', 1.0))
+        if p.get('ridges'):
+            pano = add_ridges(pano, p)
+        pano = pano.astype(np.float16)
     np.save(path, pano)
     return pano
+
+
+def add_ridges(pano, p, seed=5):
+    """Far mountain ranges round the horizon, two layers of them, hazed nearly to the sky's colour (lighter and
+    bluer the further), their tops catching a little of the sun's glow on the side it sets."""
+    H, W, _ = pano.shape
+    rows = (np.arange(H) + 0.5) / H
+    el = 90.0 - rows * (90.0 - EL_MIN)
+    phi = (np.arange(W) + 0.5) / W * 2 * np.pi
+    rng = np.random.default_rng(seed)
+    hz = gradient(p, W, H)
+    k0 = int(np.argmin(np.abs(el - 0.3)))
+    horizon = hz[k0]                                    # the sky's colour just over the horizon, per column
+    s = np.asarray(p['sun'], float)
+    mu = np.clip(np.cos(phi) * s[0] / np.hypot(s[0], s[1]) + np.sin(phi) * s[1] / np.hypot(s[0], s[1]), 0, 1)
+
+    def profile(octaves, amp, base):
+        h = np.zeros(W)
+        for o in range(octaves):
+            k = 3 * 2 ** o
+            ph = rng.uniform(0, 2 * np.pi, 3)
+            h += (np.sin(k * phi + ph[0]) + 0.5 * np.sin(2.1 * k * phi + ph[1]) + 0.3 * np.sin(3.3 * k * phi + ph[2]))\
+                / 2 ** o
+        h = (h - h.min()) / (h.max() - h.min())
+        return base + amp * h ** 1.4
+
+    out = pano.copy()
+    for (octs, amp, base, shade, blue) in ((5, 4.2, 0.6, 0.84, 0.05), (6, 3.0, -0.4, 0.70, 0.03)):
+        top = profile(octs, amp, base)
+        col = horizon * shade + np.array([0.0, 0.01, blue])[None, :]
+        col = col * (1.0 - 0.35 * mu[:, None] ** 3) + np.array([0.20, 0.10, 0.06])[None, :] * mu[:, None] ** 6
+        cover = np.clip((top[None, :] - el[:, None]) / 0.12, 0, 1)        # soft along the ridge line
+        below = np.clip((top[None, :] - el[:, None]) / 3.0, 0, 1)          # a touch darker lower down
+        c = col[None, :, :] * (1.0 - 0.10 * below[..., None])
+        out = out * (1 - cover[..., None]) + c * cover[..., None]
+    return out
 
 
 def end_sky(width, height, seed=11):

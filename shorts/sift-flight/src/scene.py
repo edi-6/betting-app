@@ -33,8 +33,10 @@ def make_renderer(width=1920, height=1080, ss=1.0, skies=('sunset',), shadow_res
     panos = {s: SKY.panorama(s).astype(np.float32) for s in skies}
     r = gfx.Renderer(width, height, ss=ss, shadow_res=shadow_res, near_half=near_half, far_half=far_half)
     at = VX.atlas()
-    li = {k: at[k] for k in ('water', 'grass_top', 'grass_side', 'oak_leaves', 'spruce_leaves', 'birch_leaves',
-                             'tall_grass', 'lava', 'ichor')}
+    li = {k: at[k] for k in ('water', 'grass_top', 'grass_side', 'lava', 'ichor')}
+    # what sways in the wind (and is lit as foliage): here the Sift's leaves, its vines and its grass
+    li.update(oak_leaves=at['sift_leaves'], spruce_leaves=at['sift_vines'], birch_leaves=at['pink_grass'],
+              tall_grass=at['blue_grass'])
     r.set_blocks(at.rgba, at.emit, noise_tex(), li)
     r.set_moon(SKY.moon_texture())
     for s in skies:

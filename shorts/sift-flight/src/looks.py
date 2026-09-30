@@ -15,7 +15,7 @@ LOOKS = {
                       sun_disc_col=(26.0, 17.0, 12.0), exposure=0.85, fog=(0.0015, 26.0, 44.0, 320.0),
                       fog_sun=(1.0, 0.72, 0.64), fog_amb=(0.03, 0.10, 0.12), fog_g=0.56, aerial=0.0006,
                       aerial_col=(0.35, 0.62, 0.70), max_dist=600.0, bloom=0.4, bloom_thresh=1.8, sat=1.10,
-                      contrast=1.06, vignette=0.2, wind=0.6, hand_gain=0.95, fog_steps=28),
+                      contrast=1.06, vignette=0.2, wind=0.8, hand_gain=0.95, fog_steps=28),
 }
 
 

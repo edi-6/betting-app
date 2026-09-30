@@ -117,7 +117,10 @@ class Flight:
         seg = np.linalg.norm(np.diff(dense, axis=0), axis=1)
         sd = np.concatenate([[0.0], np.cumsum(seg)])
         self.length = float(sd[-1])
-        self.s = np.arange(0.0, self.length, self.STEP)
+        # samples spaced evenly to land exactly on both ends (the loop closes without a jump)
+        n = int(round(self.length / self.STEP))
+        self.step = self.length / n
+        self.s = np.linspace(0.0, self.length, n + 1)
         self.P = np.stack([np.interp(self.s, sd, dense[:, k]) for k in range(3)], 1)
         T = np.gradient(self.P, axis=0)
         self.T = T / np.maximum(np.linalg.norm(T, axis=1, keepdims=True), 1e-9)
@@ -139,11 +142,11 @@ class Flight:
         th[:, 2] = 0.0
         th /= np.maximum(np.linalg.norm(th, axis=1, keepdims=True), 1e-9)
         yaw = np.unwrap(np.arctan2(th[:, 0], th[:, 1]))
-        kappa = np.gradient(yaw) / self.STEP                       # + = turning right (clockwise)
+        kappa = np.gradient(yaw) / self.step                       # + = turning right (clockwise)
         v_s = np.interp(self.s, np.interp(tt, tt, self.st), self.vt)
         want = np.degrees(np.arctan2(v_s ** 2 * kappa, G))
         want = np.clip(want, -BANK_MAX, BANK_MAX)
-        sig = 5.0 / self.STEP
+        sig = 5.0 / self.step
         k = np.arange(-int(3 * sig), int(3 * sig) + 1)
         w = np.exp(-0.5 * (k / sig) ** 2)
         w /= w.sum()
@@ -157,7 +160,7 @@ class Flight:
         return float(np.interp(t % DURATION, self.tt, self.vt))
 
     def _lerp(self, A, s):
-        f = np.clip(s / self.STEP, 0, len(self.s) - 1.000001)
+        f = np.clip(s / self.step, 0, len(self.s) - 1.000001)
         i = int(f)
         u = f - i
         return A[i] * (1 - u) + A[i + 1] * u

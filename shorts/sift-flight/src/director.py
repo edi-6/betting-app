@@ -83,7 +83,7 @@ def _render(r, fl, meta, t, t_anim, mblur=True):
     mb = None
     if mblur:
         dt = SHUTTER / FL.FPS
-        mb = dict(cam0=FL.view(fl, t - dt / 2)[0], cam1=FL.view(fl, t + dt / 2)[0], maxpx=64.0, taps=16)
+        mb = dict(cam0=FL.view(fl, t - dt / 2)[0], cam1=FL.view(fl, t + dt / 2)[0], maxpx=64.0 * r.W / W, taps=20)
     r.render(cam, env, instances=inst, lights=lt, particles=parts, streaks=streaks, clip_z=(-1e9, 1e9), mblur=mb,
              plant_dist=320.0)
     return r.finish(env).astype(np.float32)

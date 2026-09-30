@@ -78,12 +78,12 @@ def held_rocket(sc, names):
     sway = 0.012 * np.sin(t * 2 * np.pi * 6 / FL.DURATION)
     # the hand has a field of view of its own: only its distance changes with the view's, so it keeps its place;
     # using the rocket dips it down and back up (the game's use swing), it doesn't turn
-    pos = eye + F * 0.60 * k * (1.0 - 0.06 * s - 0.08 * kick) + R * (0.205 - 0.03 * s + sway) - U * (
-        0.315 + 0.16 * s + 0.04 * kick)
+    pos = eye + F * 0.60 * k * (1.0 - 0.06 * s - 0.08 * kick) + R * (0.215 - 0.03 * s + sway) - U * (
+        0.330 + 0.16 * s + 0.04 * kick)
     q = EN.basis_quat(F, R, U)
     q = EN.qmul(q, EN.qmul(EN.qz(-0.62 - 0.08 * s), EN.qmul(EN.qx(0.25 + 0.12 * s), EN.qy(0.18))))
     lay = names.index('firework_rocket') if 'firework_rocket' in names else 0
-    sz = 0.30
+    sz = 0.24
     return [('item_firework_rocket', [*pos, *q, sz, sz, sz, lay, 1, 1, 1, 0, gfx.MAT_HAND])]
 
 

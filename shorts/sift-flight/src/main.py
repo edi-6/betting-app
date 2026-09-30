@@ -52,13 +52,14 @@ class Writer:
         os.replace(self.tmp, self.path)
 
 
-def encode_youtube(video_in, wav_in, out, workdir, fps, bitrate='20M'):
+def encode_youtube(video_in, wav_in, out, workdir, fps, bitrate='30M', level='5.1'):
     """Two-pass H.264 following YouTube's recommended upload settings (High profile, closed GOP of half the frame
-    rate, 2 B-frames, BT.709 tags) muxed with 384 kbps AAC at 48 kHz, moov atom up front. 20 Mbps: well above the
-    recommendation for 1080p60 - the ichor's swirls, the leaves and the fireworks' sparks need it."""
+    rate, 2 B-frames, BT.709 tags) muxed with 384 kbps AAC at 48 kHz, moov atom up front. 30 Mbps for 1440p60 (above
+    the recommendation - the ichor's swirls, the leaves and the fireworks' sparks need it); level 5.1 for the frame
+    size."""
     gop = int(round(fps / 2))
-    common = ['-c:v', 'libx264', '-preset', 'slower', '-profile:v', 'high', '-level', '4.2',
-              '-b:v', bitrate, '-maxrate', '30M', '-bufsize', '40M', '-pix_fmt', 'yuv420p', '-r', f'{fps:g}',
+    common = ['-c:v', 'libx264', '-preset', 'slower', '-profile:v', 'high', '-level', level,
+              '-b:v', bitrate, '-maxrate', '45M', '-bufsize', '60M', '-pix_fmt', 'yuv420p', '-r', f'{fps:g}',
               '-x264-params', f'keyint={gop}:min-keyint={gop}:scenecut=0:open-gop=0:bframes=2',
               '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-color_range', 'tv']
     log = os.path.join(workdir, 'x264pass')
@@ -81,7 +82,8 @@ def soundtrack(out):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', required=True)
-    ap.add_argument('--scale', type=float, default=1.0)
+    ap.add_argument('--res', type=int, default=1440, help='output width (the height is 16:9 of it)')
+    ap.add_argument('--scale', type=float, default=None, help='or a scale of 1080x1920')
     ap.add_argument('--ss', type=float, default=2.0)
     ap.add_argument('--from', dest='t0', type=float, default=0.0)
     ap.add_argument('--to', dest='t1', type=float, default=None)
@@ -97,10 +99,12 @@ def main():
     if a.cues_only or a.encode_only:
         wav = soundtrack(a.out)
         if a.encode_only:
-            encode_youtube(video, wav, os.path.join(a.out, 'final.mp4'), a.out, FL.FPS)
+            encode_youtube(video, wav, os.path.join(a.out, 'final.mp4'), a.out, FL.FPS,
+                           level='5.1' if a.res > DR.W else '4.2', bitrate='30M' if a.res > DR.W else '20M')
             print('encoded', os.path.join(a.out, 'final.mp4'), flush=True)
         return
-    r, fl, meta = DR.setup(scale=a.scale, ss=a.ss)
+    scale = a.scale if a.scale else a.res / DR.W
+    r, fl, meta = DR.setup(scale=scale, ss=a.ss)
     print(fl.summary().splitlines()[0], flush=True)
     f0 = int(round(a.t0 * FL.FPS))
     f1 = NFRAMES if a.t1 is None else min(NFRAMES, int(round(a.t1 * FL.FPS)))
@@ -124,8 +128,9 @@ def main():
     whole = f0 == 0 and f1 == NFRAMES and not a.stills
     if whole and not a.no_audio:
         wav = soundtrack(a.out)
-        if a.every == 1 and a.scale == 1.0:
-            encode_youtube(video, wav, os.path.join(a.out, 'final.mp4'), a.out, FL.FPS)
+        if a.every == 1 and r.W >= DR.W:
+            encode_youtube(video, wav, os.path.join(a.out, 'final.mp4'), a.out, FL.FPS,
+                           level='5.1' if r.W > DR.W else '4.2', bitrate='30M' if r.W > DR.W else '20M')
             print('encoded', os.path.join(a.out, 'final.mp4'), flush=True)
         else:
             prev = os.path.join(a.out, 'preview.mp4')

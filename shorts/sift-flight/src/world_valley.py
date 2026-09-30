@@ -27,6 +27,7 @@ FALLS = ((164.0, 70.0), (164.0, 38.0))
 # the stream, from the lake's south-west shore to the spire's foot
 STREAM = [(86.0, 34.0), (70.0, 30.0), (58.0, 38.0), (44.0, 32.0), (32.0, 20.0), (24.0, 22.0), (16.0, 12.0),
           (8.0, 9.0)]
+ARCH_T = 11.52        # the second firework's boost carries the flight through a stone arch at this moment
 # strata of the cliffs, bottom up (repeating)
 STRATA = (['siftslate'] * 3 + ['red_sculk'] + ['siftslate'] * 2 + ['healthy_sculk_orange'] + ['siftslate'] * 4 +
           ['coral_block'] + ['siftslate'] * 3 + ['red_sculk'] * 2 + ['siftslate'] * 2 + ['blue_stone'] +
@@ -178,6 +179,7 @@ def build(fl=None, verbose=True):
     _coral(w, fl, rng, Hi, masks, d)
     _walls(w, rng, Hi, masks, d)
     _boulders(w, rng, Hi, masks, d)
+    _arch(w, fl, ARCH_T)
     _carve(w, fl)
     s0, s1 = fl.s_at(5.55), fl.s_at(6.50)
     _fossil(w, fl, s0, s1)
@@ -340,6 +342,7 @@ def _trees(w, fl, rng, Hi, m, d):
     X, Y, _ = w.size
     ox, oy, oz = w.origin
     placed = []
+    tall = []                 # (x, y, foot, crown top) of each tree, for the whooshes
     s_a, s_b = fl.s_ctrl[6] + 2.0, fl.s_ctrl[11] + 2.0
     side = 1
     for s in np.arange(s_a, s_b, 5.5):
@@ -358,6 +361,7 @@ def _trees(w, fl, rng, Hi, m, d):
             h = int(P[2] - Hi[i, j]) + int(rng.integers(8, 13))
             _tree(w, int(np.floor(q[0])), int(np.floor(q[1])), int(Hi[i, j]), h, rng, big, vines=(0, 3))
             placed.append((q[0], q[1]))
+            tall.append((q[0], q[1], float(Hi[i, j]), float(Hi[i, j] + h + 3)))
     n = 0
     for _ in range(4000):
         i, j = int(rng.integers(3, X - 4)), int(rng.integers(3, Y - 4))
@@ -372,12 +376,14 @@ def _trees(w, fl, rng, Hi, m, d):
         if m['high'][i, j] and rng.random() < 0.5:
             continue
         big = rng.random() < 0.3
-        _tree(w, i + ox, j + oy, int(Hi[i, j]), int(rng.integers(9, 18 if big else 14)), rng, big)
+        h = int(rng.integers(9, 18 if big else 14))
+        _tree(w, i + ox, j + oy, int(Hi[i, j]), h, rng, big)
         placed.append(q)
+        tall.append((q[0], q[1], float(Hi[i, j]), float(Hi[i, j] + h + 3)))
         n += 1
         if n >= 110:
             break
-    w.trees = placed
+    w.trees = tall
 
 
 def _coral(w, fl, rng, Hi, m, d):
@@ -386,7 +392,10 @@ def _coral(w, fl, rng, Hi, m, d):
     ox, oy, oz = w.origin
     B = BL.B
 
+    towers = []
+
     def tower(x, y, z0, h, wd):
+        towers.append((x + wd / 2, y + wd / 2, z0, z0 + h))
         for z in range(z0, z0 + h):
             ww = wd if z < z0 + h - 3 else max(1, wd - 1)
             for dx in range(ww):
@@ -432,6 +441,7 @@ def _coral(w, fl, rng, Hi, m, d):
         n += 1
         if n >= 150:
             break
+    w.towers = towers
 
 
 def _walls(w, rng, Hi, m, d):
@@ -480,6 +490,61 @@ def _boulders(w, rng, Hi, m, d):
             break
 
 
+def _arch(w, fl, t):
+    """A tall natural arch of banded siftslate standing across the flight's climb, green on its crown, vines
+    hanging from its span: the flight goes through it."""
+    s = fl.s_at(t)
+    P = fl.pos(s)
+    T = fl.tangent(s)
+    th = np.array([T[0], T[1], 0.0])
+    th /= np.linalg.norm(th)
+    lat = np.array([th[1], -th[0], 0.0])
+    strata = np.array([BL.B[n] for n in STRATA])
+    half, top, base = 9.5, P[2] + 8.5, MEADOW - 2.0
+    # the centre line: up one leg, over a rounded top, down the other (a superellipse)
+    us = np.linspace(-1.0, 1.0, 20001)
+    zs = base + (top - base) * (1.0 - np.abs(us) ** 5.0) ** 0.2
+    dense = P[None] + lat[None] * (us * half)[:, None] + np.array([0.0, 0.0, 1.0])[None] * (zs - P[2])[:, None]
+    L = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(dense, axis=0), axis=1))])
+    line = np.stack([np.interp(np.arange(0.0, L[-1], 0.3), L, dense[:, k]) for k in range(3)], 1)
+    lo = np.floor(line.min(0) - 5).astype(int)
+    hi = np.ceil(line.max(0) + 5).astype(int)
+    rng = np.random.default_rng(7)
+    for x in range(lo[0], hi[0] + 1):
+        for y in range(lo[1], hi[1] + 1):
+            q = np.array([x + 0.5, y + 0.5])
+            along = abs(float((q - P[:2]) @ th[:2]))
+            if along > 4.0:
+                continue
+            for z in range(lo[2], hi[2] + 1):
+                c = np.array([q[0], q[1], z + 0.5])
+                d = np.min(np.linalg.norm(line - c, axis=1))
+                # thicker at the feet, a little ragged
+                r = 2.4 + 1.6 * np.clip((P[2] - z) / 30.0, 0, 1) + 0.35 * np.sin(z * 0.9 + x * 0.7)
+                if d <= r and along <= 3.2 + 0.8 * np.clip((P[2] - z) / 30.0, 0, 1):
+                    w.set(x, y, z, int(strata[(z + 2) % len(strata)]))
+    # green on the crown and vines under the span
+    for x in range(lo[0], hi[0] + 1):
+        for y in range(lo[1], hi[1] + 1):
+            ztop = None
+            for z in range(hi[2], lo[2] - 1, -1):
+                if w.get(x, y, z) != 'air':
+                    ztop = z
+                    break
+            if ztop is not None and ztop > P[2] + 2 and w.get(x, y, ztop) != 'air':
+                w.set(x, y, ztop, 'healthy_sculk')
+                if rng.random() < 0.3:
+                    w.set(x, y, ztop + 1, 'blue_grass' if rng.random() < 0.5 else 'pink_grass')
+            # under the span
+            for z in range(int(P[2]) + 2, int(top) + 1):
+                if w.get(x, y, z) == 'air' and w.get(x, y, z + 1) not in ('air', 'sift_vines') and rng.random() < 0.25:
+                    for k in range(int(rng.integers(1, 4))):
+                        if w.get(x, y, z - k) == 'air':
+                            w.set(x, y, z - k, 'sift_vines')
+                    break
+    w.arch = (P, lat, half, top)
+
+
 def _fossil(w, fl, s0, s1):
     """A colossal fossil: its spine over the flight path, ribs arching down into the sand either side every five
     blocks (a few broken off), its skull half buried beyond."""
@@ -505,21 +570,32 @@ def _fossil(w, fl, s0, s1):
                 q = spine + rh * side * 11.2
                 for z in range(int(P[2]) - 10, int(spine[2]) - 10):
                     w.set(int(np.floor(q[0])), int(np.floor(q[1])), z, bone)
-    # the skull, half buried off the path's outer side
+    # the skull, half buried off the path's outer side, its snout towards the flight coming
     P = fl.pos(s1 + 6.0)
     T = fl.tangent(s1 + 6.0)
-    rh = np.array([T[1], -T[0], 0.0])
-    rh /= max(np.linalg.norm(rh), 1e-6)
-    c = P - rh * 15.0
-    cx, cy, cz = int(c[0]), int(c[1]), int(P[2]) - 5
-    for dx in range(-5, 6):
-        for dy in range(-6, 7):
-            for dz in range(0, 9):
-                inside = abs(dx) <= 4 and abs(dy) <= 5 and 1 <= dz <= 7
-                shell = (abs(dx) <= 5 and abs(dy) <= 6 and dz <= 8) and not inside
-                eye = dz in (5, 6) and abs(dy) in (2, 3) and dx == -5
-                if shell and not eye:
-                    w.set(cx + dx, cy + dy, cz + dz, bone)
+    fwd = -np.array([T[0], T[1], 0.0]) / max(np.hypot(T[0], T[1]), 1e-6)     # the way the snout points
+    side = np.array([fwd[1], -fwd[0], 0.0])
+    c = P + side * 15.0
+    ground = MEADOW - 1.0
+    for dx in range(-16, 17):
+        for dy in range(-16, 17):
+            for dz in range(-2, 12):
+                q = np.array([np.floor(c[0]) + dx + 0.5, np.floor(c[1]) + dy + 0.5, ground + dz + 0.5])
+                v = q - np.array([c[0], c[1], ground])
+                a_, b_, h = float(v @ fwd), float(v @ side), float(v[2])
+                # the cranium: a dome; the snout: a long tapering box in front of it; the jaw below the snout
+                cran = (a_ / 6.5) ** 2 + (b_ / 5.5) ** 2 + ((h - 3.0) / 5.5) ** 2 <= 1.0
+                snout = 3.0 < a_ < 14.0 and abs(b_) < 3.2 - 0.12 * a_ and 1.0 < h < 5.5 - 0.18 * a_
+                jaw = 3.0 < a_ < 13.0 and abs(b_) < 2.8 - 0.1 * a_ and -0.5 < h < 1.2 and abs(b_) > 1.0
+                shell = cran and (a_ / 5.3) ** 2 + (b_ / 4.3) ** 2 + ((h - 3.0) / 4.3) ** 2 > 1.0
+                solid = shell or snout or jaw
+                eye = abs(abs(b_) - 2.6) < 1.3 and 2.0 < a_ < 6.5 and 3.0 < h < 5.8
+                nose = 11.0 < a_ < 13.5 and abs(b_) < 1.2 and 3.0 < h < 4.5
+                if solid and not eye and not nose:
+                    w.set(int(np.floor(q[0])), int(np.floor(q[1])), int(np.floor(q[2])), bone)
+                # teeth along the snout's lower edge, hanging over the jaw
+                if 4.0 < a_ < 13.0 and abs(abs(b_) - (2.6 - 0.1 * a_)) < 0.5 and 1.0 < h < 2.0 and int(a_) % 2 == 0:
+                    w.set(int(np.floor(q[0])), int(np.floor(q[1])), int(np.floor(q[2])), bone)
     w.fossil = (s0, s1)
 
 
