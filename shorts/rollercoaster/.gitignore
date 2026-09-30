@@ -2,6 +2,6 @@ cache/
 output/
 preview/
 stills/
+sound/
 __pycache__/
 *.pyc
-release/film/
