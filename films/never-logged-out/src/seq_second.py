@@ -144,7 +144,11 @@ def shots(ctx):
     pov6 = A.POV(pos_keys=[(0, (lad_x, lady, zc + 1.2)), (0.8, (lad_x, lady, zc)), (1.6, tuple(stand6)),
                            (10.0, tuple(stand6))],
                  yaw_keys=[(0, 0.0), (1.2, 0.0), (3.6, a_fig[0]), (10.0, a_fig[0] + 1)],
-                 pitch_keys=[(0, -30), (1.2, -10), (3.6, a_fig[1]), (10.0, a_fig[1])], seed=85, jitter=0.07)
+                 pitch_keys=[(0, -30), (1.2, -10), (3.6, a_fig[1]), (4.3, a_fig[1]), (5.5, a_fig[1] + 5.0),
+                             (8.45, a_fig[1] + 5.0), (8.75, a_fig[1], 'out'), (10.0, a_fig[1])], seed=85, jitter=0.07)
+    # he zooms in on it (the zoom key; looking a little above it keeps the nearer lantern under his words), and lets
+    # go when the sound comes from behind him
+    pov6.fov_keys = A.Keys([(0, 70.0), (4.3, 70.0), (5.5, 34.0), (8.45, 32.0), (8.75, 70.0, 'out')])
 
     def figure(skin='noah', yaw_deg=180.0, head=0.0):
         a = EN.Actor('player', skin, fig, yaw=np.radians(yaw_deg))
