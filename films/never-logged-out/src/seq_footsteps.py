@@ -31,6 +31,18 @@ def interior_env(**kw):
     return looks.get('interior_night', light_col=(0.42, 0.52, 0.78), **kw)
 
 
+def room_fill(ceil, k=1.0):
+    """The torches' and the furnace's light spilling across the room, as a soft light over his head, and a little
+    more on the ceiling right above him: without them that ceiling (and the sign at his feet) would be black."""
+    return [[ceil[0] + 0.5, ceil[1] - 0.2, 2.0, 6.0, 0.55 * k, 0.47 * k, 0.4 * k],
+            [ceil[0] + 0.5, ceil[1] + 0.1, 2.55, 2.6, 0.9 * k, 0.78 * k, 0.66 * k]]
+
+
+def room_env(k=1.0):
+    """The night interior with its darkest corners lifted a little (neutral, so they don't turn red)."""
+    return dict(light_col=(0.42, 0.52, 0.78), min_amb=(0.018 * k, 0.019 * k, 0.024 * k))
+
+
 def shots(ctx):
     S = FM.Shot
     out = []
@@ -142,9 +154,10 @@ def shots(ctx):
     steps_up = [(0.6, 0.0), (2.2, 0.3), (3.8, -0.2), (5.4, 0.1), (7.0, 0.0), (8.0, 0.0)]
 
     def f6(t, T):
+        k = float(np.clip((t - 2.0) / 4.0, 0, 1))            # fades in as he looks up (f5 has none)
         return C.pov_scene(pov6, t, 'interior_night', props=C.world_props(ctx, 'village'),
-                           actors=[self_shadow(pov6.feet(t), pov6.angles(t)[0])],
-                           envkw=dict(light_col=(0.42, 0.52, 0.78)))
+                           actors=[self_shadow(pov6.feet(t), pov6.angles(t)[0])], lights=room_fill(ceil, k * k),
+                           envkw=room_env(k * k))
 
     out.append(S('f6_above', 10.0, '3d', scene=f6, hud=HOTBAR,
                  subs=[(2.0, 5.5, "There's no upstairs. There's no upstairs in this house.")],
@@ -165,7 +178,7 @@ def shots(ctx):
         props = C.world_props(ctx, 'village', ceiling=state)
         props += C.breaking_particles(ceil, t - t_break, 'spruce_planks')
         return C.pov_scene(pov7, t, 'interior_night', props=props, actors=[self_shadow(feet6, 0.0)],
-                           envkw=dict(light_col=(0.42, 0.52, 0.78)))
+                           lights=room_fill(ceil), envkw=room_env())
 
     out.append(S('f7_crack', 10.0, '3d', scene=f7, hud=HOTBAR,
                  cues=[(0.5 + k * 0.55, 'dig', {'k': k}) for k in range(10)] + [(t_break, 'block_break'),
@@ -174,9 +187,13 @@ def shots(ctx):
     # --- f8: a sign falls through the hole: GOOD. YOU DIDN'T TURN AROUND. -------------------------------------------------
     fall_t0, fall_t1 = 0.5, 0.95
     sign_pos = (ceil[0], ceil[1], 0)
-    pov8 = A.POV(pos_keys=[(0, tuple(feet6)), (3.0, (0.5, -29.9, 0.0))],
-                 yaw_keys=[(0, 0), (14.0, 1)], pitch_keys=[(0, 60), (0.9, 30), (2.2, -45), (14.0, -52)],
+    # he looks down at it, then crouches to read it
+    pov8 = A.POV(pos_keys=[(0, tuple(feet6)), (3.0, (0.5, -29.9, 0.0)), (6.0, (0.5, -29.9, 0.0)),
+                           (9.0, (0.5, -29.62, 0.0))],
+                 yaw_keys=[(0, 0), (14.0, 1)],
+                 pitch_keys=[(0, 60), (0.9, 30), (2.2, -45), (4.0, -46), (6.0, -33), (14.0, -31)],
                  seed=37, jitter=0.07)
+    pov8.eye_keys = A.Keys([(0, 1.62), (4.0, 1.62), (5.6, 1.27)])
 
     def f8(t, T):
         props = C.world_props(ctx, 'village', ceiling='gone')
@@ -185,7 +202,7 @@ def shots(ctx):
         if t >= fall_t0 - 0.3:
             props += C.sign_prop(ctx, 'village', 'sign_good', (sign_pos[0], sign_pos[1], z), 0)
         return C.pov_scene(pov8, t, 'interior_night', props=props, actors=[self_shadow(pov8.feet(t), 0.0)],
-                           envkw=dict(light_col=(0.42, 0.52, 0.78)))
+                           lights=room_fill(ceil), envkw=room_env())
 
     out.append(S('f8_sign', 14.0, '3d', scene=f8, hud=HOTBAR,
                  subs=[(10.0, 13.0, "...Who's there?")],

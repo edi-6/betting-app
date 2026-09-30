@@ -13,6 +13,7 @@ import anim as A
 import common as C
 import entities as EN
 import film as FM
+import seq_footsteps as FS
 import ui
 
 HOTBAR = dict(items=['written_book', 'torch', 'bread', 'clock', 'filled_map'], selected=5, counts={1: 16, 2: 5})
@@ -56,7 +57,11 @@ def shots(ctx):
         props += C.sign_prop(ctx, 'village', 'sign_good', (ceil[0], ceil[1], 0), 0)
         return props
 
-    night = dict(light_col=(0.42, 0.52, 0.78))
+    night = FS.room_env()
+
+    def room_lights():
+        """The same light as act 3's last shots, and a little more by the door, over the trapdoor."""
+        return FS.room_fill(ceil) + [[tc[0] + 0.3, tc[1] + 0.6, 1.7, 4.0, 0.45, 0.4, 0.34]]
 
     # --- u1: the clock on the wall: past midnight ----------------------------------------------------------------------
     clock = np.array([1.5, -24.0, 2.5])
@@ -68,7 +73,7 @@ def shots(ctx):
                  seed=41, jitter=0.08)
 
     def u1(t, T):
-        return C.pov_scene(pov1, t, 'interior_night', props=house_props(), envkw=night)
+        return C.pov_scene(pov1, t, 'interior_night', props=house_props(), lights=room_lights(), envkw=night)
 
     out.append(S('u1_clock', 7.0, '3d', scene=u1, hud=HOTBAR,
                  subs=[(3.6, 5.0, "It's past midnight."), (5.2, 7.0, 'Rule one...')],
@@ -99,7 +104,7 @@ def shots(ctx):
             props += carpet_lift(trap[:2] + (0,), a)
         props += C.breaking_particles((trap[0], trap[1], -0.45), t - t_break, 'red_wool', n=10, dur=0.8)
         swing = float(np.clip((t - t_break + 0.2) / 0.25, 0, 1)) if t < t_break + 0.05 else 0.0
-        return C.pov_scene(pov2, t, 'interior_night', props=props, swing=swing, envkw=night)
+        return C.pov_scene(pov2, t, 'interior_night', props=props, swing=swing, lights=room_lights(), envkw=night)
 
     out.append(S('u2_carpet', 8.0, '3d', scene=u2, hud=HOTBAR,
                  subs=[(2.8, 5.2, "...There's air coming up through the floor.")],
@@ -118,7 +123,7 @@ def shots(ctx):
     def u3(t, T):
         swing = float(np.clip((t - t_open + 0.2) / 0.25, 0, 1)) if t < t_open + 0.05 else 0.0
         return C.pov_scene(pov3, t, 'interior_night', props=house_props(carpet=False, trap_deg=float(trap3(t))),
-                           swing=swing, envkw=night)
+                           swing=swing, lights=room_lights(), envkw=night)
 
     out.append(S('u3_trapdoor', 7.0, '3d', scene=u3, hud=HOTBAR,
                  subs=[(4.0, 6.6, 'Someone lit torches down there.')],

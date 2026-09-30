@@ -15,7 +15,7 @@ import pixelfont as PF
 OUT = os.path.join(FM.ROOT, 'release')
 # name, shot, time, crop (x, y, width) of the 1920 x 1080 frame, lines [(text, colour)], text at top / bottom
 THUMBS = [
-    ('thumb_a', 'f5_shadows', 10.4, (240, 60, 1440), [('2 SHADOWS.', (240, 240, 240)), ('1 PLAYER.', (235, 40, 40))],
+    ('thumb_a', 'f5_shadows', 10.4, (60, 100, 1300), [('2 SHADOWS.', (240, 240, 240)), ('1 PLAYER.', (235, 40, 40))],
      'bottom'),
     ('thumb_b', 's8_turn', 10.9, (300, 40, 1320), [("DON'T LOOK", (240, 240, 240)), ('AT HIM', (235, 40, 40))],
      'top'),
