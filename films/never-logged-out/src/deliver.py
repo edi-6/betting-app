@@ -113,15 +113,16 @@ def git_release():
 
 
 def web(dst):
-    """H.264 in fragmented-MP4 pieces of ~40 s (each well under 15 MB) and manifest.json listing them: the page
-    streams them (a playlist built in the browser) and joins them for its download button (init.mp4 followed by
-    every piece is itself one playable MP4)."""
+    """H.264 in fragmented-MP4 pieces of ~30 s (at most ~12 MB at the 3 Mbit/s ceiling), their HLS playlist (as
+    playlist.txt: a type any host serves) and manifest.json listing them. The page streams the pieces and joins them
+    for its download button (init.mp4 followed by every piece is itself one playable MP4). About 185 MiB in all: under
+    the 200 MiB a phone app will save, and the 256 MB a page may hold."""
     import json
     v, a = src(False)
     os.makedirs(dst, exist_ok=True)
-    ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-b:v', '2100k',
-       '-maxrate', '3200k', '-bufsize', '6400k', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', '48',
-       '-keyint_min', '48', '-sc_threshold', '0', '-c:a', 'aac', '-b:a', '128k', '-f', 'hls', '-hls_time', '40',
+    ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-b:v', '1900k',
+       '-maxrate', '3000k', '-bufsize', '6000k', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', '48',
+       '-keyint_min', '48', '-sc_threshold', '0', '-c:a', 'aac', '-b:a', '128k', '-f', 'hls', '-hls_time', '30',
        '-hls_playlist_type', 'vod', '-hls_segment_type', 'fmp4', '-hls_fmp4_init_filename', 'init.mp4',
        '-hls_segment_filename', os.path.join(dst, 'seg%03d.mp4'), os.path.join(dst, 'film.m3u8'))
     segs = []
@@ -131,15 +132,15 @@ def web(dst):
             dur = float(ln[8:].split(',')[0])
         elif ln and not ln.startswith('#'):
             segs.append({'file': ln, 'dur': dur, 'bytes': os.path.getsize(os.path.join(dst, ln))})
-    os.remove(os.path.join(dst, 'film.m3u8'))
+    os.replace(os.path.join(dst, 'film.m3u8'), os.path.join(dst, 'playlist.txt'))
     init = os.path.getsize(os.path.join(dst, 'init.mp4'))
     total = init + sum(s['bytes'] for s in segs)
     man = {'init': 'init.mp4', 'segments': segs, 'bytes': total, 'seconds': round(sum(s['dur'] for s in segs), 2),
            'filename': NAME + '.mp4'}
     with open(os.path.join(dst, 'manifest.json'), 'w') as fh:
         json.dump(man, fh)
-    big = [s['file'] for s in segs if s['bytes'] > 15 * 2 ** 20]
-    print('web:', len(segs), 'pieces,', total // 2 ** 20, 'MiB', ('OVER 15 MiB: ' + str(big)) if big else '')
+    big = [s['file'] for s in segs if s['bytes'] > 15_000_000]
+    print('web:', len(segs), 'pieces,', total // 2 ** 20, 'MiB', ('OVER 15 MB: ' + str(big)) if big else '')
 
 
 def preview():

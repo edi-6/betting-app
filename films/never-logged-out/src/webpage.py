@@ -111,7 +111,9 @@ PAGE = r'''<title>The Player Who Never Logged Out</title>
 }
 html { background: var(--night); }
 body { background: var(--night); color: var(--paper); font: 400 var(--s0)/1.6 var(--body); margin: 0; }
-.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 28px; }
+.wrap { max-width: 1000px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid;
+  grid-template-columns: minmax(0, 1fr); gap: 28px; }
+.wrap > * { min-width: 0; }
 a { color: var(--moon); }
 code { font-family: var(--mono); font-size: 0.9em; color: var(--moon); }
 :focus-visible { outline: 2px solid var(--moon); outline-offset: 2px; }
@@ -290,16 +292,7 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
     if (m) $('#dl').textContent = 'Download the film (MP4, ' + mb(m.bytes) + ' MB)';
   }).catch(function () { manifest = null; });
 
-  // --- watching: a playlist built here from the manifest; the pieces are published next to this page
-  function playlist(m) {
-    var base = new URL('.', location.href).href;
-    var top = Math.ceil(Math.max.apply(null, m.segments.map(function (s) { return s.dur; })));
-    var out = ['#EXTM3U', '#EXT-X-VERSION:7', '#EXT-X-TARGETDURATION:' + top, '#EXT-X-PLAYLIST-TYPE:VOD',
-               '#EXT-X-MAP:URI="' + base + m.init + '"'];
-    m.segments.forEach(function (s) { out.push('#EXTINF:' + s.dur.toFixed(3) + ',', base + s.file); });
-    out.push('#EXT-X-ENDLIST');
-    return URL.createObjectURL(new Blob([out.join('\n')], { type: 'application/vnd.apple.mpegurl' }));
-  }
+  // --- watching: the film's HLS playlist (playlist.txt) and its pieces are published next to this page
   function cannotStream() {
     status.textContent = "This browser can't stream the film here. Use Download instead.";
     $('#player').hidden = true; $('#poster').hidden = false; $('#watch').hidden = false;
@@ -307,7 +300,7 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
   $('#watch').addEventListener('click', function () {
     if (!manifest) { status.textContent = 'The film is still being uploaded. Try again in a minute.'; return; }
     var v = $('#player');
-    var url = playlist(manifest);
+    var url = 'playlist.txt';
     $('#watch').hidden = true; $('#poster').hidden = true; v.hidden = false;
     if (window.Hls && window.Hls.isSupported()) {
       var hls = new window.Hls({ maxBufferLength: 60 });
@@ -375,15 +368,21 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
   });
 
   // --- copying
-  function copy(text, out) {
-    navigator.clipboard.writeText(text).then(function () { out.textContent = 'Copied.'; }, function () {
-      out.textContent = 'Copying is blocked here. Select the text and copy it instead.';
-    });
+  function copy(el, out) {
+    function selectIt() {
+      if (el.hidden) el.hidden = false;
+      var r = document.createRange(); r.selectNodeContents(el);
+      var sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+      out.textContent = "Copying is blocked here. The text is selected: copy it with your keyboard or menu.";
+    }
+    try {
+      navigator.clipboard.writeText(el.textContent).then(function () { out.textContent = 'Copied.'; }, selectIt);
+    } catch (e) { selectIt(); }
   }
   document.querySelectorAll('[data-copy]').forEach(function (b) {
-    b.addEventListener('click', function () { copy($('#' + b.getAttribute('data-copy')).textContent, $('#kit-status')); });
+    b.addEventListener('click', function () { copy($('#' + b.getAttribute('data-copy')), $('#kit-status')); });
   });
-  $('#copy-srt').addEventListener('click', function () { copy($('#srt').textContent, $('#srt-status')); });
+  $('#copy-srt').addEventListener('click', function () { copy($('#srt'), $('#srt-status')); });
   $('#save-srt').addEventListener('click', function () {
     save('voiceover.srt.txt', $('#srt').textContent, $('#srt-status')).then(function (ok) {
       if (ok) $('#srt-status').textContent = 'Saved. Rename it to voiceover.srt for caption uploads.';
