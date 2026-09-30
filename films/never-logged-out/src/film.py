@@ -316,11 +316,13 @@ def add_subtitle(film, s, t, img, hud_state):
 
 
 def compose_frame(film, ctx, s, t, img3d, frame, subs=True):
+    """One finished frame: the picture with its interface and film look, then his subtitle over it."""
     import post
     img, hud_state = compose_layers(film, ctx, s, t, img3d)
+    out = post.apply(img, frame, s.start + t, s.fx(t))
     if subs:
-        add_subtitle(film, s, t, img, hud_state)
-    return post.apply(img, frame, s.start + t, s.fx(t))
+        out = add_subtitle(film, s, t, out, hud_state)
+    return out
 
 
 def compose(film, ctx, out_path, preview=False, t_from=0.0, t_to=None, every=1, stills_dir=None, clean_path=None):
@@ -378,6 +380,59 @@ def compose(film, ctx, out_path, preview=False, t_from=0.0, t_to=None, every=1, 
     if wc:
         wc.close()
     print(f'[compose] {count} frames in {time.time() - t0:.0f}s', flush=True)
+
+
+def compose_all(film, ctx, out_path, clean_path, preview=False):
+    """The whole film, resumably: each shot is composed into its own file under output/parts (skipped when it is
+    already there), and a list joins them (ffmpeg's concat demuxer reads it as one film; no second copy on disk)."""
+    import post
+    d = frames_dir(preview)
+    base = os.path.dirname(out_path)
+    pdir, cdir = os.path.join(base, 'parts'), os.path.join(base, 'parts_clean')
+    os.makedirs(pdir, exist_ok=True)
+    os.makedirs(cdir, exist_ok=True)
+    crf, preset = (18, 'fast') if not preview else (22, 'veryfast')
+    t0 = time.time()
+    for s in film.shots:
+        pp, cp = os.path.join(pdir, s.name + '.mp4'), os.path.join(cdir, s.name + '.mp4')
+        if os.path.exists(pp) and os.path.exists(cp):
+            continue
+        ts = time.time()
+        src, still = None, None
+        if s.kind in ('3d', 'still'):
+            path = os.path.join(d, s.name + '.mp4')
+            if not os.path.exists(path):
+                sys.exit(f'[compose] missing the 3D render of {s.name}: run render first')
+            if s.kind == 'still':
+                still = next(read_frames(path))
+            else:
+                src = read_frames(path)
+        wr = Writer(pp, crf=crf, preset=preset)
+        wc = Writer(cp, crf=crf, preset=preset)
+        for k in range(s.nframes):
+            img3d = still
+            if src is not None:
+                try:
+                    img3d = next(src)
+                except StopIteration:
+                    src = None
+            t = k / FPS
+            frame = s.f0 + k
+            img, hud_state = compose_layers(film, ctx, s, t, img3d)
+            clean = post.apply(img, frame, s.start + t, s.fx(t))
+            wc.write(clean)
+            wr.write(add_subtitle(film, s, t, clean.copy(), hud_state))
+        wr.close()
+        wc.close()
+        print(f'[compose] {s.name}: {s.nframes} frames in {time.time() - ts:.0f}s', flush=True)
+    for dd in (pdir, cdir):
+        lst = os.path.join(dd, 'list.txt')
+        with open(lst, 'w') as fh:
+            for s in film.shots:
+                fh.write(f"file '{os.path.join(dd, s.name + '.mp4')}'\n")
+        size = sum(os.path.getsize(os.path.join(dd, s.name + '.mp4')) for s in film.shots)
+        print('[compose]', lst, len(film.shots), 'shots,', size // 2 ** 20, 'MiB', flush=True)
+    print(f'[compose] done in {time.time() - t0:.0f}s', flush=True)
 
 
 def srt_time(t):
@@ -475,8 +530,11 @@ def main():
         render_shots(film, ctx, names or None, a.preview, a.force)
     elif a.cmd == 'compose':
         base = os.path.join(ROOT, 'preview' if a.preview else 'output')
-        compose(film, ctx, os.path.join(base, 'film_noaudio.mp4'), a.preview, a.t_from, a.t_to,
-                clean_path=None if a.preview else os.path.join(base, 'film_clean_noaudio.mp4'))
+        if a.t_from > 0 or a.t_to is not None:
+            compose(film, ctx, os.path.join(base, 'film_noaudio.mp4'), a.preview, a.t_from, a.t_to)
+        else:
+            compose_all(film, ctx, os.path.join(base, 'film_noaudio.mp4'), os.path.join(base, 'film_clean_noaudio.mp4'),
+                        a.preview)
     elif a.cmd == 'stills':
         os.makedirs(a.arg, exist_ok=True)
         every = max(1, int(round((a.every or 1.0) * FPS)))

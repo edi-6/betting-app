@@ -18,12 +18,14 @@ def grain(img, amount, frame, size=2):
         return img
     rng = _rng(frame, 1)
     h, w = img.shape[:2]
-    n = rng.standard_normal((h // size + 1, w // size + 1)).astype(np.float32)
+    n = rng.standard_normal((h // size + 1, w // size + 1), dtype=np.float32)
     n = np.repeat(np.repeat(n, size, 0), size, 1)[:h, :w]
     f = img.astype(np.float32)
-    lum = f.mean(2, keepdims=True) / 255.0
-    k = amount * 255.0 * (0.35 + 1.6 * lum * (1.0 - lum))
-    return np.clip(f + n[..., None] * k, 0, 255).astype(np.uint8)
+    lum = f.mean(2, keepdims=True) * np.float32(1.0 / 255.0)
+    k = np.float32(amount * 255.0) * (np.float32(0.35) + np.float32(1.6) * lum * (np.float32(1.0) - lum))
+    f += n[..., None] * k
+    np.clip(f, 0, 255, out=f)
+    return f.astype(np.uint8)
 
 
 def vhs(img, amount, frame, t=0.0):
@@ -106,15 +108,24 @@ def freeze_dim(img, a):
     return np.clip(f * (1 - 0.35 * a) + 255.0 * 0.22 * a, 0, 255).astype(np.uint8)
 
 
+_VIG = {}
+
+
 def vignette(img, amount):
     if amount <= 0:
         return img
     h, w = img.shape[:2]
-    y = np.linspace(-1, 1, h)[:, None]
-    x = np.linspace(-1, 1, w)[None, :] * (w / h)
-    r = np.sqrt(x * x + y * y) / np.sqrt(1 + (w / h) ** 2)
-    k = 1.0 - amount * np.clip((r - 0.35) / 0.65, 0, 1) ** 1.6
-    return (img.astype(np.float32) * k[..., None]).astype(np.uint8)
+    key = (round(float(amount), 3), h, w)
+    k = _VIG.get(key)
+    if k is None:
+        y = np.linspace(-1, 1, h)[:, None]
+        x = np.linspace(-1, 1, w)[None, :] * (w / h)
+        r = np.sqrt(x * x + y * y) / np.sqrt(1 + (w / h) ** 2)
+        k = (1.0 - amount * np.clip((r - 0.35) / 0.65, 0, 1) ** 1.6).astype(np.float32)[..., None]
+        if len(_VIG) > 16:
+            _VIG.clear()
+        _VIG[key] = k
+    return (img.astype(np.float32) * k).astype(np.uint8)
 
 
 def apply(img, frame, t, fx):

@@ -26,7 +26,7 @@ def ff(*args):
 
 
 def src(clean=False):
-    v = os.path.join(OUT, 'film_clean_noaudio.mp4' if clean else 'film_noaudio.mp4')
+    v = os.path.join(OUT, 'parts_clean' if clean else 'parts', 'list.txt')
     a = os.path.join(OUT, 'film_audio.wav')
     for p in (v, a):
         if not os.path.exists(p):
@@ -34,11 +34,15 @@ def src(clean=False):
     return v, a
 
 
+def video_in(v):
+    return ['-f', 'concat', '-safe', '0', '-i', v]
+
+
 def master():
     for clean in (False, True):
         v, a = src(clean)
         out = os.path.join(OUT, NAME + ('_clean' if clean else '') + '.mp4')
-        ff('-i', v, '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k',
+        ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'copy', '-c:a', 'aac', '-b:a', '256k',
            '-movflags', '+faststart', '-shortest', out)
         print(out, os.path.getsize(out) // 2 ** 20, 'MiB')
 
@@ -47,7 +51,7 @@ def hevc(clean, kbps, out):
     """One pass, average bitrate with a ceiling (two passes of x265 would take hours here)."""
     v, a = src(clean)
     x265 = f'log-level=error:aq-mode=3:psy-rd=1.5:deblock=-1,-1:vbv-maxrate={int(kbps * 1.6)}:vbv-bufsize={kbps * 3}'
-    ff('-i', v, '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx265', '-preset', 'fast', '-b:v', f'{kbps}k',
+    ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx265', '-preset', 'fast', '-b:v', f'{kbps}k',
        '-x265-params', x265, '-pix_fmt', 'yuv420p', '-tag:v', 'hvc1', '-c:a', 'aac', '-b:a', '160k',
        '-movflags', '+faststart', '-shortest', out)
 
@@ -115,7 +119,7 @@ def web(dst):
     import json
     v, a = src(False)
     os.makedirs(dst, exist_ok=True)
-    ff('-i', v, '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-b:v', '2100k',
+    ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'slow', '-b:v', '2100k',
        '-maxrate', '3200k', '-bufsize', '6400k', '-profile:v', 'high', '-pix_fmt', 'yuv420p', '-g', '48',
        '-keyint_min', '48', '-sc_threshold', '0', '-c:a', 'aac', '-b:a', '128k', '-f', 'hls', '-hls_time', '40',
        '-hls_playlist_type', 'vod', '-hls_segment_type', 'fmp4', '-hls_fmp4_init_filename', 'init.mp4',
@@ -144,7 +148,7 @@ def preview():
     dur = 766.0
     budget = 29.0 * 8 * 2 ** 20 / dur / 1000 - 48          # kbit/s of video that fits 29 MiB with 48 kbit/s audio
     for p in (1, 2):
-        ff('-i', v, '-i', a, '-map', '0:v', '-map', '1:a', '-vf', 'scale=854:480:flags=lanczos', '-c:v', 'libx264',
+        ff(*video_in(v), '-i', a, '-map', '0:v', '-map', '1:a', '-vf', 'scale=854:480:flags=lanczos', '-c:v', 'libx264',
            '-preset', 'slow', '-b:v', f'{int(budget)}k', '-pass', p, '-passlogfile', out + '.log',
            *(['-an', '-f', 'null', '/dev/null'] if p == 1 else
              ['-c:a', 'aac', '-b:a', '48k', '-ac', '1', '-movflags', '+faststart', '-shortest', out]))
