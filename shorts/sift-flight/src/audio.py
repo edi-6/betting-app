@@ -907,7 +907,7 @@ def build(cues, out_path, seed=5, stems=False):
         sfx.add2(L * 0.30, R * 0.30, tf + 0.08)
 
     # ---- things going past: trees, the fossil's ribs, the coral towers, the arch
-    for kind, items, base in (('tree', ev['trees'], 0.34), ('tower', ev['towers'], 0.36)):
+    for kind, items, base in (('tree', ev['trees'], 0.55), ('tower', ev['towers'], 0.55)):
         for e in items:
             g = base * float(np.clip(5.0 / max(e['d'], 1.5), 0.15, 1.6))
             d = float(np.clip(0.34 - 0.002 * e['v'], 0.18, 0.34))
@@ -916,7 +916,7 @@ def build(cues, out_path, seed=5, stems=False):
             sfx.add(x, e['t'] - d * 0.4, g, 0.8 * e['side'])
     for k, e in enumerate(ev['ribs']):
         x = whoosh(rng, 0.20, 2400, 420, 0.9)
-        sfx.add(x, e['t'] - 0.08, 0.30, 0.55 if k % 2 else -0.55)
+        sfx.add(x, e['t'] - 0.08, 0.42, 0.55 if k % 2 else -0.55)
     x = whoosh(rng, 0.9, 1800, 160, 1.3)
     sfx.add(x, ev['arch'] - 0.35, 0.75, 0.0)
 
