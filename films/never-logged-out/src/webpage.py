@@ -176,7 +176,15 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
 .gate { display: grid; gap: 12px; justify-items: start; padding: 20px; border: 1px dashed var(--line); }
 .gate p { margin: 0; max-width: 64ch; }
 .spoil { color: var(--warn); }
-@media (max-width: 560px) { td.n { min-width: 9rem; } .watch { font-size: var(--s0); padding: 10px 16px; } }
+@media (max-width: 560px) {
+  .watch { font-size: var(--s0); padding: 10px 16px; }
+  /* his lines: the note goes under the line instead of a third column */
+  .act table, .act tbody { display: block; }
+  .act tr { display: grid; grid-template-columns: 4.2rem minmax(0, 1fr); }
+  .act td.t { width: auto; }
+  .act td.line, .act td.n { min-width: 0; }
+  .act td.n { grid-column: 2; border-top: 0; padding-top: 0; }
+}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
@@ -188,7 +196,7 @@ ul { margin: 0; padding-left: 1.2em; display: grid; gap: 6px; }
   </header>
 
   <div class="screen" id="screen">
-    <img id="poster" src="thumb_a.jpg" alt="Two shadows on a moonlit wall">
+    <img id="poster" src="poster.jpg" alt="Moonlight from a window on a wall, and two shadows in it">
     <video id="player" controls playsinline preload="none" hidden></video>
     <button class="watch" id="watch" type="button">Watch here</button>
   </div>

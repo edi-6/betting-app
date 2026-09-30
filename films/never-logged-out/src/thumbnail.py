@@ -1,7 +1,7 @@
 """Thumbnails (1280 x 720) from frames of the rendered film (the 3D pictures, without the interface), cropped,
 graded a touch harder, with a few words in the game's font.
 
-    python thumbnail.py            # -> release/thumb_a.jpg, thumb_b.jpg, thumb_c.jpg
+    python thumbnail.py            # -> release/thumb_a.jpg, thumb_b.jpg, thumb_c.jpg, poster.jpg
 """
 import os
 import subprocess
@@ -21,6 +21,8 @@ THUMBS = [
      'top'),
     ('thumb_c', 'u6b_streets', 3.0, (0, 0, 1920), [('24 COPIES', (240, 240, 240)), ('OF MY HOUSE', (235, 40, 40))],
      'top'),
+    # the release page's poster: the first picture without words (the page puts its own button over it)
+    ('poster', 'f5_shadows', 10.4, (60, 100, 1300), [], None),
 ]
 
 
@@ -56,6 +58,11 @@ def make(name, shot, t, crop, lines, where):
     h = w * 9 // 16
     img = np.asarray(Image.fromarray(img[y:y + h, x:x + w]).resize((1280, 720), Image.LANCZOS))
     img = grade(img)
+    if not lines:
+        path = os.path.join(OUT, name + '.jpg')
+        Image.fromarray(img).save(path, quality=90)
+        print(path)
+        return
     sprites = [PF.render(txt, px=11, color=col, outline=2, outline_col=(8, 6, 10)) for (txt, col) in lines]
     total = sum(s.shape[0] for s in sprites) + 14 * (len(sprites) - 1)
     yy = 40 if where == 'top' else 720 - 44 - total
