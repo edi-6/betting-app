@@ -110,8 +110,8 @@ python flight.py                                          # the flight's length,
 python qa.py ../output/final.mp4                          # streams, frame checks and the loop seam
 ```
 
-The first run bakes the sky and builds the valley into a cache (under a minute). A delivered frame takes about 4.5
-seconds on a 4-core CPU renderer, so the whole video takes a little over an hour.
+The first run bakes the sky and builds the valley into a cache (under a minute). A delivered frame takes about 3 to 4
+seconds on a 4-core CPU renderer, so the whole video takes about 50 minutes.
 
 ## Make your own
 
