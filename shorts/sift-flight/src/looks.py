@@ -8,6 +8,7 @@ import gfx
 from sky import sun_dir
 
 SUN = sun_dir(165.0, 12.0)
+MOON = sun_dir(165.0, 32.0)
 
 LOOKS = {
     'sift_gold': dict(sky='sift_gold', light_dir=SUN, light_col=(3.3, 2.15, 1.7), sky_amb=(0.30, 0.42, 0.50),
@@ -16,6 +17,13 @@ LOOKS = {
                       fog_sun=(1.0, 0.72, 0.64), fog_amb=(0.03, 0.10, 0.12), fog_g=0.56, aerial=0.0006,
                       aerial_col=(0.35, 0.62, 0.70), max_dist=600.0, bloom=0.4, bloom_thresh=1.8, sat=1.10,
                       contrast=1.06, vignette=0.2, wind=0.8, hand_gain=0.95, fog_steps=28),
+    'sift_night': dict(sky='sift_night', light_dir=MOON, light_col=(0.30, 0.38, 0.54), sky_amb=(0.040, 0.060, 0.090),
+                       gnd_amb=(0.030, 0.020, 0.030), blk_col=(2.8, 1.7, 0.85), min_amb=(0.010, 0.012, 0.020),
+                       emit_gain=4.2, sun_disc_dir=MOON, sun_size=0.0, sun_disc_col=(0.0, 0.0, 0.0), moon_dir=MOON,
+                       moon_size=0.045, moon_bright=3.0, stars=1.0, exposure=1.45, fog=(0.0015, 26.0, 44.0, 320.0),
+                       fog_sun=(0.5, 0.5, 0.6), fog_amb=(0.004, 0.008, 0.012), fog_g=0.56, aerial=0.0005,
+                       aerial_col=(0.02, 0.04, 0.06), max_dist=600.0, bloom=0.6, bloom_thresh=1.1, sat=1.12,
+                       contrast=1.06, vignette=0.3, wind=0.8, hand_gain=1.6, fog_steps=28),
 }
 
 

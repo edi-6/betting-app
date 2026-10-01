@@ -46,6 +46,11 @@ PRESETS = {
                       horizon_away=(0.20, 0.46, 0.52), glow=(2.0, 0.85, 0.80), glow_pow=(4.0, 22.0, 450.0),
                       cloud_sun=(3.4, 1.8, 1.55), cloud_amb_lo=(0.14, 0.22, 0.28), cloud_amb_hi=(0.40, 0.52, 0.58),
                       coverage=0.34, sun_scale=1.0, ridges=2.0),
+    # the flight by night: a moon high in the west-north-west, a deep teal-blue sky, clouds faintly moonlit
+    'sift_night': dict(sun=sun_dir(165.0, 32.0), zenith=(0.002, 0.007, 0.016), horizon_sun=(0.030, 0.042, 0.062),
+                       horizon_away=(0.012, 0.026, 0.040), glow=(0.035, 0.045, 0.065), glow_pow=(4.0, 22.0, 450.0),
+                       cloud_sun=(0.16, 0.19, 0.25), cloud_amb_lo=(0.008, 0.012, 0.020),
+                       cloud_amb_hi=(0.020, 0.030, 0.045), coverage=0.30, sun_scale=0.5, ridges=2.1),
     'sunset': dict(sun=sun_dir(200.0, 5.0), zenith=(0.10, 0.17, 0.40), horizon_sun=(1.70, 0.78, 0.32),
                    horizon_away=(0.42, 0.40, 0.62), glow=(2.4, 1.0, 0.35), glow_pow=(4.0, 22.0, 400.0),
                    cloud_sun=(3.4, 1.55, 0.62), cloud_amb_lo=(0.18, 0.16, 0.26), cloud_amb_hi=(0.42, 0.36, 0.52),
@@ -213,7 +218,7 @@ def add_ridges(pano, p, seed=5):
     out = pano.copy()
     for (octs, amp, base, shade, blue) in ((5, 4.2, 0.6, 0.84, 0.05), (6, 3.0, -0.4, 0.70, 0.03)):
         top = profile(octs, amp, base)
-        col = horizon * shade + np.array([0.0, 0.01, blue])[None, :]
+        col = horizon * shade + np.array([0.0, 0.01, blue])[None, :] * np.clip(horizon.mean(1, keepdims=True) / 0.3, 0, 1)
         col = col * (1.0 - 0.35 * mu[:, None] ** 3) + np.array([0.20, 0.10, 0.06])[None, :] * mu[:, None] ** 6
         cover = np.clip((top[None, :] - el[:, None]) / 0.12, 0, 1)        # soft along the ridge line
         below = np.clip((top[None, :] - el[:, None]) / 3.0, 0, 1)          # a touch darker lower down

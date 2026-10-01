@@ -50,6 +50,9 @@ def main():
         lines = [('POV:', (255, 255, 255), None, 0.22),
                  ('FIRST ELYTRA FLIGHT', (255, 255, 255), None, 0.90),
                  ('IN THE NEW DIMENSION', None, ((255, 236, 130), (255, 150, 30)), 0.90)]
+        if DR.LOOK == 'sift_night':
+            lines = [('THE NEW DIMENSION', (255, 255, 255), None, 0.90),
+                     ('AT NIGHT', None, ((255, 236, 130), (255, 150, 30)), 0.80)]
         y0 = 120
         band = np.zeros(H)
         band[y0 - 60:y0 + 330] = 1.0
@@ -61,7 +64,7 @@ def main():
             spr = PF.render(txt, px=px, color=col or (255, 255, 255), grad=grad, outline=1)
             x = (W - spr.shape[1]) / 2
             blit(img, spr, x, y0)
-            if txt.startswith('IN THE'):
+            if txt.startswith('IN THE') or txt == 'AT NIGHT':
                 sp = splash('THE SIFT!', 7)
                 blit(img, sp, min(x + spr.shape[1] - sp.shape[1] * 0.55, W - sp.shape[1] - 28), y0 + spr.shape[0] - 6)
             y0 += spr.shape[0] + 22

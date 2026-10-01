@@ -21,6 +21,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CACHE = os.path.join(HERE, '..', 'cache')
 STANDARD = {'size', 'origin', 'ids', 'state', 'hidden', 'tint', 'signs', 'frames'}
 SOURCES = ('world_valley.py', 'flight.py', 'blocks.py', 'voxel.py', 'textures.py')
+LOOK = os.environ.get('LOOK', 'sift_gold')     # sift_gold (the golden hour) or sift_night
 SHUTTER = 0.5            # of a frame (a 180-degree shutter)
 LOOP_BLEND = (14.2, 15.0)
 
@@ -58,7 +59,7 @@ def load_world(r=None, fl=None):
 def setup(preview=False, ss=1.0, scale=None):
     """The renderer (the sky baked, the kinds registered, the valley uploaded), the flight and the valley's metadata."""
     k = scale or (0.5 if preview else 1.0)
-    r = SC.make_renderer(int(W * k), int(H * k), ss=ss, skies=('sift_gold',), near_half=40.0, far_half=260.0)
+    r = SC.make_renderer(int(W * k), int(H * k), ss=ss, skies=(looks.LOOKS[LOOK]['sky'],), near_half=40.0, far_half=260.0)
     PR.register(r)
     mobs.register(r)
     fx.register(r)
@@ -70,7 +71,7 @@ def setup(preview=False, ss=1.0, scale=None):
 
 def _render(r, fl, meta, t, t_anim, mblur=True):
     cam, eye, axes, v = FL.view(fl, t)
-    env = looks.get()
+    env = looks.get(LOOK)
     # the eye stops down when it looks into the low sun (a function of the view, so it is the same every time)
     toward = float(np.dot(axes[0], np.asarray(env['light_dir'], float)))
     env['exposure'] = float(env['exposure'] * (1.0 - 0.34 * FL.smooth(0.55, 0.97, toward)))
