@@ -63,7 +63,7 @@ def main():
             blit(img, spr, x, y0)
             if txt.startswith('IN THE'):
                 sp = splash('THE SIFT!', 7)
-                blit(img, sp, x + spr.shape[1] - sp.shape[1] * 0.55, y0 + spr.shape[0] - 6)
+                blit(img, sp, min(x + spr.shape[1] - sp.shape[1] * 0.55, W - sp.shape[1] - 28), y0 + spr.shape[0] - 6)
             y0 += spr.shape[0] + 22
     Image.fromarray(np.clip(img, 0, 255).astype(np.uint8)).save(a.out, quality=94)
     print('thumbnail:', a.out, flush=True)
