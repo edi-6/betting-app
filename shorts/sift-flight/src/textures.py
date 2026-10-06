@@ -1664,7 +1664,40 @@ def item_icons():
             p[3, c, :3] = (200, 196, 180)
     icons['torn_page'] = p
     icons['firework_rocket'] = firework_icon()
+    icons['water_bucket'] = bucket_icon(True)
+    icons['bucket'] = bucket_icon(False)
     return icons
+
+
+def bucket_icon(water):
+    """The bucket: a grey iron pail with a dark outline and a handle, full of water or empty."""
+    img = np.zeros((N, N, 4), np.uint8)
+    fill = np.zeros((N, N), bool)
+    for r in range(4, 15):
+        u = (r - 4) / 10.0
+        c0, c1 = int(round(3 + 2 * u)), int(round(12 - 2 * u))
+        for c in range(c0, c1 + 1):
+            col = (204, 204, 212) if c < (c0 + c1) / 2 else (150, 150, 160)
+            if r == 4 or r == 5:
+                col = (226, 226, 232)
+            img[r, c, :3] = col
+            fill[r, c] = True
+    for c in range(5, 11):
+        img[5, c, :3] = (60, 110, 232) if water else (70, 70, 78)
+        img[6, c, :3] = (96, 150, 248) if water else (92, 92, 100)
+    for c in range(4, 12):
+        if abs(c - 7.5) < 3.6:
+            pass
+    for (r, c) in ((3, 4), (2, 5), (1, 6), (1, 7), (1, 8), (1, 9), (2, 10), (3, 11)):
+        img[r, c, :3] = (80, 80, 90)
+        fill[r, c] = True
+    edge = np.zeros_like(fill)
+    for dr, dc in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+        edge |= np.roll(np.roll(fill, dr, 0), dc, 1)
+    edge &= ~fill
+    img[edge, :3] = (40, 40, 48)
+    img[fill | edge, 3] = 255
+    return img
 
 
 def firework_icon():
