@@ -109,7 +109,7 @@ def crackle(rng, n):
     x = A.lp(rng.standard_normal(n), 2500, 2) * 0.12
     pops = (rng.random(n) < 14.0 / SR).astype(float)
     pops = np.convolve(pops * rng.uniform(0.3, 1.0, n), np.exp(-np.arange(int(0.006 * SR)) / (0.0012 * SR)))[:n]
-    x += A.hp(pops * rng.standard_normal(n), 1200, 2) * 2.2
+    x += A.lp(A.hp(pops * rng.standard_normal(n), 1200, 2), 6000, 2) * 1.5
     return x
 
 
@@ -145,6 +145,25 @@ def boom(rng, dur=3.2):
     x = np.sin(2 * np.pi * np.cumsum(f) / SR) * np.exp(-t / 1.1)
     x += 0.35 * A.lp(rng.standard_normal(n), 300, 2) * np.exp(-t / 0.07)
     return A.norm(x, 0.95)
+
+
+def true_peak_limit(L, R, ceiling_db=-2.0, release=0.08):
+    """Keep the true (inter-sample) peak under the ceiling: peaks measured 4x oversampled, the gain looks ahead a
+    millisecond and recovers over `release` seconds."""
+    from scipy import signal
+    c = 10 ** (ceiling_db / 20)
+    pk = np.zeros(len(L))
+    for x in (L, R):
+        up = signal.resample_poly(x, 4, 1)[:4 * len(x)]
+        pk = np.maximum(pk, np.abs(up).reshape(-1, 4).max(1))
+    g = np.minimum(1.0, c / np.maximum(pk, 1e-9))
+    from scipy.ndimage import minimum_filter1d
+    la = int(0.001 * SR)
+    g = minimum_filter1d(g, 2 * la + 1, mode='nearest')           # instant attack, a millisecond early
+    a = np.exp(-1.0 / (release * SR))
+    slow = signal.lfilter([1 - a], [1, -a], g, zi=[g[0] * a])[0]   # ... and a smooth recovery
+    out = np.minimum(g, slow)
+    return L * out, R * out
 
 
 def build(tl, out_path, seed=7):
@@ -255,6 +274,7 @@ def build(tl, out_path, seed=7):
     L3_, R3_ = A.compress(L3_ * g, R3_ * g, thresh_db=-24.0, ratio=2.2)
     g = 10 ** ((-14.0 - A.integrated_lufs(L3_, R3_)) / 20.0)
     L3_, R3_ = A.limiter(L3_ * g, R3_ * g, ceiling=10 ** (-1.2 / 20))
+    L3_, R3_ = true_peak_limit(L3_, R3_, -2.0)
     L, R = _mid(L3_, n), _mid(R3_, n)
     lufs = A.integrated_lufs(L, R)
     A._write(out_path, L, R)

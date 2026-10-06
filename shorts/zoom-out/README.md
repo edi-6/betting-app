@@ -33,7 +33,7 @@ MINECRAFT WORLD?* and *THE WHOLE WORLD = 1 PIXEL*. The same image without text i
 | --- | --- |
 | Length | 30.5 s, a seamless loop (the last frame runs straight into the first, and so does the sound) |
 | Video | 1080x1920 (9:16), **60 fps**, H.264 High@4.2, 16 Mbps 2-pass, closed GOP (30), BT.709 |
-| Audio | AAC-LC 384 kbps, 48 kHz stereo, loudness-normalised to about -14 LUFS, peak -1.2 dBFS |
+| Audio | AAC-LC 384 kbps, 48 kHz stereo, loudness-normalised to -14 LUFS, true peak -2 dBFS |
 | Rendering | 4 samples per pixel (rendered at 2160x3840), zoom motion blur |
 
 Everything is generated from code: no stock footage, samples, fonts or AI-generated media. The world, the

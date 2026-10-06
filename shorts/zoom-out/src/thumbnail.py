@@ -19,7 +19,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('out')
     ap.add_argument('--no-title', action='store_true')
-    ap.add_argument('--L3', type=float, default=0.15, help='view width at the eye (m): the pupil is 1/16 m')
+    ap.add_argument('--L3', type=float, default=0.3, help='view width at the eye (m): the pupil is 1/16 m')
     ap.add_argument('--ss', type=float, default=2.0)
     args = ap.parse_args()
     z = Zoom(ss=args.ss)
