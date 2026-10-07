@@ -61,12 +61,15 @@ class Show:
         rr = np.hypot((xx - W / 2) / (H / 2), (yy - H / 2) / (H / 2))
         self.vig = np.clip((rr - 0.55) / 0.55, 0, 1)[..., None].astype(np.float32)
 
-    def frame(self, i, hud=True):
+    def frame(self, i, hud=True, cam=None):
+        """Frame i as uint8 RGB. cam: optional (cx, cy, zoom) to use instead of the story's camera (the cover)."""
         s = self.s
         t = i / FPS
         ev = s.events
         te = min(t, ev['dead'] + 0.3)                     # the world freezes under the death screen
         cx, cy, zoom, shake = s.camera(te)
+        if cam is not None:
+            (cx, cy, zoom), shake = cam, 0.0
         if shake > 0:
             cx += shake * np.sin(t * 91.0)
             cy += shake * np.cos(t * 77.0)

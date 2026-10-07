@@ -20,8 +20,8 @@ geode, an Ancient City with a Warden in it, five diamonds… and a lava lake one
    is back at the start.
 
 **Ready to upload:** [`release/dig-down.mp4`](release/dig-down.mp4). The optional cover is in
-[`release/thumbnail.jpg`](release/thumbnail.jpg): Steve on his last block with the lava under him, *I DUG STRAIGHT
-DOWN … BIG MISTAKE*. The same image without text is [`release/thumbnail_clean.jpg`](release/thumbnail_clean.jpg).
+[`release/thumbnail.jpg`](release/thumbnail.jpg): a close-up of Steve raising his pickaxe over his last block, the
+lava glowing under it, *I DUG STRAIGHT DOWN … BIG MISTAKE*. The same image without text is [`release/thumbnail_clean.jpg`](release/thumbnail_clean.jpg).
 
 | | |
 | --- | --- |
