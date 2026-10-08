@@ -1,0 +1,6 @@
+numpy
+scipy
+opencv-python-headless
+pillow
+pymunk>=7
+imageio-ffmpeg
