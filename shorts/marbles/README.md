@@ -22,8 +22,8 @@ marbles themselves:
    (*RUN!!!*), and it blows up. 10,000 marbles fly out at you in slow motion and rain down over the meadow.
 
 **For a second watch:** someone is standing in front of the sun in the picture, two white eyes on a dark figure. In
-the last shot he's standing on the edge of the cliff, the same spot as at the end of
-[`../dominoes-2`](../dominoes-2).
+the last shot he's there again, tiny, on the edge of the cliff from [`../dominoes-2`](../dominoes-2), among the trees
+to the left of the machine.
 
 **Ready to upload:** [`release/marbles.mp4`](release/marbles.mp4). The optional cover is in
 [`release/thumbnail.jpg`](release/thumbnail.jpg): the machine from the front, the picture three quarters done (the

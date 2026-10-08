@@ -104,8 +104,8 @@ class Show:
         """On the edge of the cliff in the last shot, for a second watch."""
         if ts < self.t_boom + 1.5:
             return None
-        p = (-24.0, LY.CLIFF_Y + 1.0, float(LY.CLIFF_Z))
-        return self.hero.instances(p, 0.12)
+        p = (-70.0, LY.CLIFF_Y + 1.0, float(LY.CLIFF_Z))
+        return self.hero.instances(p, -2.6)
 
     def glass(self, ts):
         if ts >= self.t_boom:
