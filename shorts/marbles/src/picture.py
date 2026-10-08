@@ -164,7 +164,7 @@ def paint(seed=3, star=None):
         sx_, sz_ = star
         dx, dz = np.abs(X - sx_), np.abs(Z - sz_)
         arms = ((dx < 0.12) & (dz < 1.1)) | ((dz < 0.12) & (dx < 1.1))
-        img[arms] = img[arms] * 0.4 + np.array([255, 236, 200]) * 0.6
+        img[arms] = img[arms] * 0.7 + np.array([200, 170, 255]) * 0.3
         img[np.hypot(dx, dz) < 0.32] = (255, 244, 196)
     # the square sun, with a glow
     sx, sz, sh = SUN

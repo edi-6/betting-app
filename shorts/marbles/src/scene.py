@@ -84,7 +84,7 @@ def make_renderer(width=1080, height=1920, ss=1.0, shadow_res=4096, sky_res=(819
     r.bloom_thresh = 2.2
     r.bloom = 0.32
     r.sculk_r = 0.0
-    r.glow = 1.6                       # the end rods
+    r.glow = 2.4                       # the end rods
     r.ssao_radius = 0.6
     r.puff_tint = np.array([0.95, 0.93, 0.88])
     return r, wd

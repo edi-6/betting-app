@@ -20,7 +20,7 @@ import numpy as np
 
 from sound import (SR, Mix, bell, bp, compress, expenv, hp, integrated_lufs, limiter, lp, make_crash,
                    make_explosion, make_heartbeat, make_hiss, make_levelup, make_step, make_swell, make_whoosh,
-                   midi_hz, modal, norm, piano, reverb, shaped_noise, sine_sweep, strings, _write)
+                   midi_hz, modal, norm, piano, resample, reverb, shaped_noise, sine_sweep, strings, _write)
 
 BPM = 112.0
 BEAT = 60.0 / BPM
@@ -35,6 +35,14 @@ MEL = [(79, 0, 2), (78, 2, 1), (76, 3, 1), (74, 4, 2), (71, 6, 2)]       # a hoo
 # ---------------------------------------------------------------------------------------------
 # sounds
 # ---------------------------------------------------------------------------------------------
+def _put(x, c, p, g=1.0):
+    """Add c into x at sample p (clipped at the end)."""
+    if p >= len(x):
+        return
+    m = min(len(c), len(x) - p)
+    x[p:p + m] += c[:m] * g
+
+
 def make_tick(rng):
     """A glass marble off an end rod: a bright tink, and the thin rod ringing for a moment."""
     dur = 0.09
@@ -64,9 +72,9 @@ def make_rattle_bed(dur, density, rng):
     x = bp(rng.standard_normal(n), 2600, 9000, 2)
     x += 0.5 * bp(rng.standard_normal(n), 1200, 2600, 2)
     # grainy: chop it into tiny bursts
-    g = (rng.random(n) < 0.08).astype(float)
-    g = np.convolve(g, np.hanning(64), 'same')
-    return x * (0.35 + 0.65 * np.clip(g, 0, 1)) * density
+    g = (rng.random(n) < 0.03).astype(float)
+    g = np.convolve(g, np.hanning(96), 'same')
+    return x * (0.15 + 0.85 * np.clip(g, 0, 1)) * density
 
 
 def make_roll(rng, dur):
@@ -79,7 +87,7 @@ def make_roll(rng, dur):
     for _ in range(int(60 * dur)):
         p = int(rng.uniform(0, n - 3000))
         c = make_clack(rng, 0.3)
-        cr[p:p + len(c)] += c * rng.uniform(0.2, 0.6)
+        _put(cr, c, p, rng.uniform(0.2, 0.6))
     x = norm(x) + 0.35 * norm(cr)
     return x * np.clip(t / 0.3, 0, 1) * np.clip((dur - t) / 0.2, 0, 1)
 
@@ -94,7 +102,7 @@ def make_clunk(rng):
     for _ in range(14):
         c = make_clack(rng, 0.2)
         p = int(rng.uniform(0.02, 0.35) * SR)
-        x[p:p + len(c)] += c * rng.uniform(0.1, 0.3)
+        _put(x, c, p, rng.uniform(0.1, 0.3))
     return norm(np.tanh(1.4 * x), 0.95)
 
 
@@ -156,7 +164,7 @@ def make_ram(rng):
     for _ in range(90):
         c = make_clack(rng)
         p = int(rng.uniform(0.03, 0.5) * SR)
-        x[p:p + len(c)] += c * rng.uniform(0.05, 0.25)
+        _put(x, c, p, rng.uniform(0.05, 0.25))
     return norm(np.tanh(1.5 * x), 0.98)
 
 
@@ -357,13 +365,13 @@ def build(meta, out_path, seed=11, stems=False):
         a = int(t0 * SR)
         bed[a:a + int(SR / fps) + 1] = min(dens, 1.2) * g
     bed = lp(np.convolve(bed, np.ones(1200) / 1200, 'same'), 30, 1)
-    fx.add(make_rattle_bed(len(bed) / SR, np.clip(bed, 0, 1.5), rng), 0.0, 0.10)
+    fx.add(make_rattle_bed(len(bed) / SR, np.clip(bed, 0, 1.5), rng), 0.0, 0.055)
 
     # -- the hopper, the golden ball and the jam ----------------------------------------------------
     if 'gold_roll' in ev and 'jam' in ev:
         fx.add(make_roll(rng, ev['jam'] - ev['gold_roll'] + 0.1), ev['gold_roll'], 0.45, -0.1)
     if 'jam' in ev:
-        fx.add(make_clunk(rng), ev['jam'], 0.9)
+        fx.add(make_clunk(rng), ev['jam'], 0.55)
     # -- the goat ---------------------------------------------------------------------------------------
     if 'step_in' in ev:
         a = max(ev['step_in'], starts['goat_a'] - 0.2)
@@ -407,9 +415,14 @@ def build(meta, out_path, seed=11, stems=False):
         fx.add(make_levelup(rng), ev['land'] + 0.05, 0.55)
     # -- the creeper ----------------------------------------------------------------------------------------
     if 'fuse' in ev:
-        fx.add(make_hiss(rng, 1.55), ev['fuse'], 0.8)
+        # the hiss runs right up to the blast (the fuse is in slow motion on screen), swelling
+        hs = make_hiss(rng, ev.get('boom', ev['fuse'] + 1.5) - ev['fuse'] + 0.05)
+        fx.add(hs * np.linspace(0.55, 1.25, len(hs)), ev['fuse'], 0.8)
     if 'boom' in ev:
-        fx.add(make_explosion(rng, 2.4), ev['boom'], 1.0)
+        fx.add(make_explosion(rng, 2.4), ev['boom'], 1.15)
+        # the blast is in slow motion on screen: under it, the same roar slowed down an octave
+        slow = resample(make_explosion(rng, 2.4), 0.5)
+        fx.add(lp(slow, 2500, 2), ev['boom'] + 0.02, 0.75)
         fx.add(make_crash(rng, 2.6), ev['boom'] + 0.02, 0.6, -0.4)
         fx.add(make_crash(rng, 2.2), ev['boom'] + 0.05, 0.6, 0.4)
         # glass tinkling down

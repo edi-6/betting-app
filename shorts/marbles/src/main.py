@@ -131,14 +131,14 @@ class Show:
         out.append(('GUESS THE PICTURE...', win(o + 0.15, st['rise'] + 0.6), 'white', v - o - 0.15))
         g = st['gold']
         tr = g + (self.hopper.t_roll - self.tl.shots[3].ts(0)) * 1.0
-        out.append(('UH OH...', win(tr + 0.2, st['stuck'] - 0.1), 'yellow', v - tr - 0.2))
         sj = st['stuck']
         tj = g + (self.t_jam - self.tl.shots[3].ts(0))
-        out.append(("IT'S STUCK!", win(tj, sj + 1.3), 'red', v - tj))
+        out.append(('UH OH...', win(tr + 0.2, tj - 0.05, 0.12), 'yellow', v - tr - 0.2))
+        out.append(("IT'S STUCK!", win(tj + 0.08, sj + 1.1), 'red', v - tj - 0.08))
         gg = st['goat_a']
         out.append(('...A GOAT?', win(gg + 0.4, gg + 1.6), 'white', v - gg - 0.4))
         b = st['burst']
-        out.append(('THE GOAT SAVED IT!', win(b + 0.15, b + 1.55), 'green', v - b - 0.15))
+        out.append(('THE GOAT SAVED IT!', win(b + 0.15, b + 1.45), 'yellow', v - b - 0.15))
         last = st['last']
         out.append(('THE LAST ONE...', win(st['count'] + 0.1, last + 2.6), 'white', v - st['count'] - 0.1))
         d = st['done']
@@ -322,7 +322,8 @@ def main():
             if a > 0:
                 img = hud.draw(img, nm, done, 0.0, ts, alpha=a)
             for (text, ca, sty, age) in show.captions(i):
-                img = hud.caption(img, text, ca, pop=float(np.clip(age, 0, 1)), **styles[sty])
+                y = 1640 if s.name in ('done', 'fuse') else 1360
+                img = hud.caption(img, text, ca, y=y, pop=float(np.clip(age, 0, 1)), **styles[sty])
         if args.stills:
             Image.fromarray(img).save(os.path.join(args.out, f'{i:04d}.jpg'), quality=90)
         else:
